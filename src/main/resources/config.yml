@@ -1,0 +1,46 @@
+# AdminCore main configuration.
+# Database queries are async through HikariCP.
+
+general:
+  server-name: "paper-1"
+
+database:
+  # SQLITE or MYSQL
+  type: SQLITE
+  sqlite:
+    file: admincore.db
+  mysql:
+    host: localhost
+    port: 3306
+    database: admincore
+    username: root
+    password: change-me
+    pool-size: 10
+
+dialogs:
+  enabled: true
+  # Brand names that should skip Paper dialogs and use the chat fallback.
+  blocked-client-brands: []
+
+sanctions:
+  default-reason: "Aucune raison fournie"
+
+chat:
+  slowmode-default: 0
+  clear-lines: 120
+
+staff:
+  freeze-allowed-commands:
+    - "/msg"
+    - "/tell"
+    - "/w"
+    - "/r"
+    - "/reply"
+    - "/discord"
+
+vpn-check:
+  enabled: false
+  # {ip} will be replaced at runtime.
+  url-template: "https://example.com/check?ip={ip}"
+  # A simple string check on the response body.
+  true-match: "\"proxy\":true"

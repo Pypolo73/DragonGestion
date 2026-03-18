@@ -1,0 +1,247 @@
+package fr.dragon.admincore.core;
+
+import fr.dragon.admincore.chat.ChatService;
+import fr.dragon.admincore.chat.ChatServiceImpl;
+import fr.dragon.admincore.chat.ChatCommand;
+import fr.dragon.admincore.chat.ChatListener;
+import fr.dragon.admincore.core.compat.EmptyReportService;
+import fr.dragon.admincore.core.compat.StaffPlusPlusBanServiceAdapter;
+import fr.dragon.admincore.core.compat.StaffPlusPlusMuteServiceAdapter;
+import fr.dragon.admincore.core.compat.StaffPlusPlusStaffChatAdapter;
+import fr.dragon.admincore.core.compat.StaffPlusPlusWarningServiceAdapter;
+import fr.dragon.admincore.database.DatabaseManager;
+import fr.dragon.admincore.database.NoteRepository;
+import fr.dragon.admincore.database.PlayerRepository;
+import fr.dragon.admincore.database.SanctionRepository;
+import fr.dragon.admincore.dialog.ChatPromptService;
+import fr.dragon.admincore.dialog.DialogSupportService;
+import fr.dragon.admincore.gui.GuiListener;
+import fr.dragon.admincore.sanctions.ConnectionSanctionListener;
+import fr.dragon.admincore.sanctions.SanctionCommand;
+import fr.dragon.admincore.sanctions.SanctionService;
+import fr.dragon.admincore.sanctions.SanctionServiceImpl;
+import fr.dragon.admincore.sanctions.SanctionsAdminCommand;
+import fr.dragon.admincore.staffmode.StaffCommand;
+import fr.dragon.admincore.staffmode.StaffModeListener;
+import fr.dragon.admincore.staffmode.StaffModeService;
+import fr.dragon.admincore.staffmode.StaffModeServiceImpl;
+import fr.dragon.admincore.util.ConfigLoader;
+import fr.dragon.admincore.util.MessageFormatter;
+import fr.dragon.admincore.vanish.VanishCommand;
+import fr.dragon.admincore.vanish.VanishService;
+import fr.dragon.admincore.vanish.VanishServiceImpl;
+import net.shortninja.staffplusplus.IStaffPlus;
+import net.shortninja.staffplusplus.ban.BanService;
+import net.shortninja.staffplusplus.mute.MuteService;
+import net.shortninja.staffplusplus.reports.ReportService;
+import net.shortninja.staffplusplus.session.SessionManager;
+import net.shortninja.staffplusplus.staffmode.chat.StaffChatService;
+import net.shortninja.staffplusplus.warnings.WarningService;
+import org.bukkit.Bukkit;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.PluginCommand;
+import org.bukkit.plugin.ServicePriority;
+import org.bukkit.plugin.java.JavaPlugin;
+
+public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
+
+    private ConfigLoader configLoader;
+    private MessageFormatter messageFormatter;
+    private PermissionService permissionService;
+    private DatabaseManager databaseManager;
+    private PlayerSessionManager playerSessionManager;
+    private SanctionService sanctionService;
+    private ChatService chatService;
+    private VanishService vanishService;
+    private StaffModeService staffModeService;
+    private ChatPromptService chatPromptService;
+    private DialogSupportService dialogSupportService;
+
+    private StaffChatService staffChatService;
+    private BanService banService;
+    private MuteService muteService;
+    private WarningService warningService;
+    private ReportService reportService;
+
+    @Override
+    public void onEnable() {
+        saveDefaultConfig();
+        this.configLoader = new ConfigLoader(this);
+        this.configLoader.reload();
+        this.messageFormatter = new MessageFormatter(this.configLoader);
+        this.permissionService = new PermissionService(this.messageFormatter);
+        this.playerSessionManager = new PlayerSessionManager();
+
+        this.databaseManager = new DatabaseManager(this, this.configLoader);
+        this.databaseManager.start();
+
+        final SanctionRepository sanctionRepository = new SanctionRepository(this.databaseManager);
+        final PlayerRepository playerRepository = new PlayerRepository(this.databaseManager);
+        final NoteRepository noteRepository = new NoteRepository(this.databaseManager);
+        this.sanctionService = new SanctionServiceImpl(this.databaseManager, sanctionRepository, playerRepository, noteRepository);
+        this.chatService = new ChatServiceImpl(this.configLoader, this.messageFormatter);
+        this.vanishService = new VanishServiceImpl(this);
+        this.staffModeService = new StaffModeServiceImpl(this.playerSessionManager, this.vanishService);
+        this.chatPromptService = new ChatPromptService(this, this.messageFormatter);
+        this.dialogSupportService = new DialogSupportService(this, this.configLoader, this.messageFormatter, this.chatPromptService);
+
+        this.staffChatService = new StaffPlusPlusStaffChatAdapter(this.chatService);
+        this.banService = new StaffPlusPlusBanServiceAdapter(this, this.sanctionService);
+        this.muteService = new StaffPlusPlusMuteServiceAdapter(this, this.sanctionService);
+        this.warningService = new StaffPlusPlusWarningServiceAdapter(this, this.sanctionService);
+        this.reportService = new EmptyReportService();
+
+        AdminCoreAPI.bind(this, this.sanctionService, this.vanishService, this.staffModeService, this.chatService, this.playerSessionManager);
+        Bukkit.getServicesManager().register(IStaffPlus.class, this, this, ServicePriority.Normal);
+
+        registerCommands();
+        registerListeners();
+        getLogger().info("AdminCore active. Compatibilite StaffPlusPlus API chargee.");
+    }
+
+    @Override
+    public void onDisable() {
+        Bukkit.getServicesManager().unregister(IStaffPlus.class, this);
+        AdminCoreAPI.clear();
+        if (this.databaseManager != null) {
+            this.databaseManager.close();
+        }
+    }
+
+    public void reloadPlugin() {
+        this.configLoader.reload();
+        this.messageFormatter = new MessageFormatter(this.configLoader);
+    }
+
+    public ConfigLoader getConfigLoader() {
+        return this.configLoader;
+    }
+
+    public MessageFormatter getMessageFormatter() {
+        return this.messageFormatter;
+    }
+
+    public PermissionService getPermissionService() {
+        return this.permissionService;
+    }
+
+    public PlayerSessionManager getPlayerSessionManager() {
+        return this.playerSessionManager;
+    }
+
+    public SanctionService getSanctionService() {
+        return this.sanctionService;
+    }
+
+    public ChatService getChatService() {
+        return this.chatService;
+    }
+
+    public VanishService getVanishService() {
+        return this.vanishService;
+    }
+
+    public StaffModeService getStaffModeService() {
+        return this.staffModeService;
+    }
+
+    public DialogSupportService getDialogSupportService() {
+        return this.dialogSupportService;
+    }
+
+    public ChatPromptService getChatPromptService() {
+        return this.chatPromptService;
+    }
+
+    private void registerCommands() {
+        final SanctionCommand sanctionCommand = new SanctionCommand(this);
+        final SanctionsAdminCommand sanctionsAdminCommand = new SanctionsAdminCommand(this);
+        final ChatCommand chatCommand = new ChatCommand(this);
+        final StaffCommand staffCommand = new StaffCommand(this);
+        final VanishCommand vanishCommand = new VanishCommand(this);
+        final AdminCoreCommand adminCoreCommand = new AdminCoreCommand(this);
+
+        bind("tempban", sanctionCommand);
+        bind("tempmute", sanctionCommand);
+        bind("ban", sanctionCommand);
+        bind("mute", sanctionCommand);
+        bind("kick", sanctionCommand);
+        bind("warn", sanctionCommand);
+
+        bind("unban", sanctionsAdminCommand);
+        bind("unmute", sanctionsAdminCommand);
+        bind("warnings", sanctionsAdminCommand);
+        bind("clearwarns", sanctionsAdminCommand);
+        bind("history", sanctionsAdminCommand);
+        bind("lookup", sanctionsAdminCommand);
+        bind("alts", sanctionsAdminCommand);
+        bind("note", sanctionsAdminCommand);
+        bind("notes", sanctionsAdminCommand);
+        bind("ipban", sanctionsAdminCommand);
+        bind("checkvpn", sanctionsAdminCommand);
+
+        bind("clearchat", chatCommand);
+        bind("slowmode", chatCommand);
+        bind("chatlock", chatCommand);
+        bind("muteall", chatCommand);
+        bind("broadcast", chatCommand);
+
+        bind("staffmode", staffCommand);
+        bind("freeze", staffCommand);
+        bind("spy", staffCommand);
+        bind("invsee", staffCommand);
+        bind("stafflist", staffCommand);
+
+        bind("vanish", vanishCommand);
+        bind("admincore", adminCoreCommand);
+    }
+
+    private void registerListeners() {
+        Bukkit.getPluginManager().registerEvents(new ConnectionSanctionListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new StaffModeListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new GuiListener(), this);
+    }
+
+    private void bind(final String name, final CommandExecutor executor) {
+        final PluginCommand command = getCommand(name);
+        if (command == null) {
+            getLogger().warning("Commande absente du plugin.yml: " + name);
+            return;
+        }
+        command.setExecutor(executor);
+        if (executor instanceof org.bukkit.command.TabCompleter completer) {
+            command.setTabCompleter(completer);
+        }
+    }
+
+    @Override
+    public StaffChatService getStaffChatService() {
+        return this.staffChatService;
+    }
+
+    @Override
+    public SessionManager getSessionManager() {
+        return this.playerSessionManager;
+    }
+
+    @Override
+    public BanService getBanService() {
+        return this.banService;
+    }
+
+    @Override
+    public MuteService getMuteService() {
+        return this.muteService;
+    }
+
+    @Override
+    public ReportService getReportService() {
+        return this.reportService;
+    }
+
+    @Override
+    public WarningService getWarningService() {
+        return this.warningService;
+    }
+}
