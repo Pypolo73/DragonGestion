@@ -12,6 +12,7 @@ import java.util.Deque;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -136,7 +137,8 @@ public final class ChatServiceImpl implements ChatService {
 
     @Override
     public void broadcast(final String message) {
-        Bukkit.broadcast(this.formatter.deserialize(message));
+        final boolean allowMiniMessage = this.configLoader.config().getBoolean("chat.broadcast-allow-minimessage", false);
+        Bukkit.broadcast(allowMiniMessage ? this.formatter.deserialize(message) : Component.text(message == null ? "" : message));
     }
 
     @Override

@@ -49,11 +49,16 @@ public final class AdminCoreCommand implements CommandExecutor, TabCompleter {
         }
         if (args.length >= 2 && "db".equalsIgnoreCase(args[0]) && "export".equalsIgnoreCase(args[1])) {
             final Path exportDir = this.plugin.getDataFolder().toPath().resolve("exports");
-            this.plugin.getSanctionService().exportCsv(exportDir).thenAccept(file ->
-                this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
+            this.plugin.getSanctionService().exportCsv(exportDir)
+                .thenAccept(file -> this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
                     sender.sendMessage(this.plugin.getMessageFormatter().message("admin.db-export", this.plugin.getMessageFormatter().text("file", file.toString())))
-                )
-            );
+                ))
+                .exceptionally(throwable -> {
+                    this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
+                        sender.sendMessage(this.plugin.getMessageFormatter().message("errors.database"))
+                    );
+                    return null;
+                });
             return true;
         }
         if ("pending".equalsIgnoreCase(args[0])) {

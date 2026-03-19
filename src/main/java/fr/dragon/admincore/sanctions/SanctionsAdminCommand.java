@@ -11,6 +11,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
@@ -27,7 +28,9 @@ import org.bukkit.entity.Player;
 public final class SanctionsAdminCommand implements CommandExecutor, TabCompleter {
 
     private final AdminCorePlugin plugin;
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(5))
+        .build();
 
     public SanctionsAdminCommand(final AdminCorePlugin plugin) {
         this.plugin = plugin;
@@ -260,18 +263,39 @@ public final class SanctionsAdminCommand implements CommandExecutor, TabComplete
                 return;
             }
             final String urlTemplate = this.plugin.getConfigLoader().config().getString("vpn-check.url-template", "");
+            if (urlTemplate.isBlank()) {
+                sync(() -> sender.sendMessage(this.plugin.getMessageFormatter().message("vpn.disabled")));
+                return;
+            }
             final String url = urlTemplate.replace("{ip}", URLEncoder.encode(ip, StandardCharsets.UTF_8));
-            final HttpRequest request = HttpRequest.newBuilder(URI.create(url)).GET().build();
-            this.httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenAccept(response ->
-                sync(() -> sender.sendMessage(this.plugin.getMessageFormatter().message(
+            final URI uri;
+            try {
+                uri = URI.create(url);
+            } catch (final IllegalArgumentException exception) {
+                sync(() -> sender.sendMessage(this.plugin.getMessageFormatter().message("vpn.disabled")));
+                return;
+            }
+            if (!"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme())) {
+                sync(() -> sender.sendMessage(this.plugin.getMessageFormatter().message("vpn.disabled")));
+                return;
+            }
+            final HttpRequest request = HttpRequest.newBuilder(uri)
+                .timeout(Duration.ofSeconds(Math.max(1, this.plugin.getConfigLoader().config().getInt("vpn-check.timeout-seconds", 5))))
+                .GET()
+                .build();
+            this.httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenAccept(response -> sync(() -> sender.sendMessage(this.plugin.getMessageFormatter().message(
                     "vpn.result",
                     this.plugin.getMessageFormatter().text("ip", ip),
                     this.plugin.getMessageFormatter().text(
                         "result",
                         response.body().contains(this.plugin.getConfigLoader().config().getString("vpn-check.true-match", "\"proxy\":true")) ? "VPN detecte" : "Aucun VPN detecte"
                     )
-                )))
-            );
+                ))))
+                .exceptionally(throwable -> {
+                    sync(() -> sender.sendMessage(this.plugin.getMessageFormatter().message("errors.database")));
+                    return null;
+                });
         });
         return true;
     }

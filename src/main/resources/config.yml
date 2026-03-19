@@ -16,6 +16,8 @@ database:
     username: root
     password: change-me
     pool-size: 10
+    ssl-mode: PREFERRED
+    allow-public-key-retrieval: false
 
 dialogs:
   enabled: true
@@ -64,6 +66,8 @@ chat:
   # Alias accepte aussi: repeat-delay-seconds
   # Temps minimum avant de pouvoir renvoyer exactement le meme message.
   same-message-delay-seconds: 30
+  # Si false, /broadcast envoie du texte brut sans parser MiniMessage.
+  broadcast-allow-minimessage: false
   blocked-words:
     - "fdp"
     - "tg"
@@ -162,6 +166,7 @@ staff:
 
 vpn-check:
   enabled: false
+  timeout-seconds: 5
   # {ip} will be replaced at runtime.
   url-template: "https://example.com/check?ip={ip}"
   # A simple string check on the response body.

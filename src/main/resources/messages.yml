@@ -60,6 +60,7 @@ chat:
   message-removed: "<prefix><green>Le message de <white><author></white> a ete retire de la liste recente.</green>"
   slowmode-status: "<prefix><gray>Slowmode: <white><seconds>s</white>.</gray>"
   slowmode-updated: "<prefix><green>Slowmode defini a <white><seconds>s</white>.</green>"
+  slowmode-invalid: "<prefix><red>Valeur de slowmode invalide.</red>"
   lock-enabled: "<prefix><red>Chat verrouille.</red>"
   lock-disabled: "<prefix><green>Chat deverrouille.</green>"
   muteall-enabled: "<prefix><red>MuteAll active.</red>"

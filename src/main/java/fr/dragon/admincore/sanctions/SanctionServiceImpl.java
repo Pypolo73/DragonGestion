@@ -177,8 +177,8 @@ public final class SanctionServiceImpl implements SanctionService {
 
     @Override
     public CompletableFuture<Path> exportCsv(final Path directory) {
-        return this.sanctionRepository.allSanctions().thenCompose(sanctions -> this.noteRepository.findAll(null, "__never__").handle((notes, ignored) -> List.<NoteRepository.NoteEntry>of())
-            .thenCompose(ignoredNotes -> CompletableFuture.supplyAsync(() -> {
+        return this.sanctionRepository.allSanctions().thenCompose(sanctions ->
+            CompletableFuture.supplyAsync(() -> {
                 try {
                     Files.createDirectories(directory);
                     final Path sanctionsFile = directory.resolve("sanctions.csv");
@@ -201,7 +201,8 @@ public final class SanctionServiceImpl implements SanctionService {
                 } catch (final IOException exception) {
                     throw new IllegalStateException("Export CSV impossible", exception);
                 }
-            }, this.databaseManager.executor())));
+            }, this.databaseManager.executor())
+        );
     }
 
     private Optional<SanctionRecord> validateActive(final Optional<SanctionRecord> record) {

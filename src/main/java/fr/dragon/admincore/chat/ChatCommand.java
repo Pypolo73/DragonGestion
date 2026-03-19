@@ -163,7 +163,14 @@ public final class ChatCommand implements CommandExecutor, TabCompleter {
         if ("off".equalsIgnoreCase(args[0])) {
             this.plugin.getChatService().setSlowMode(0);
         } else {
-            this.plugin.getChatService().setSlowMode(Integer.parseInt(args[0]));
+            final int seconds;
+            try {
+                seconds = Integer.parseInt(args[0]);
+            } catch (final NumberFormatException exception) {
+                sender.sendMessage(this.plugin.getMessageFormatter().message("chat.slowmode-invalid"));
+                return true;
+            }
+            this.plugin.getChatService().setSlowMode(seconds);
         }
         sender.sendMessage(this.plugin.getMessageFormatter().message(
             "chat.slowmode-updated",

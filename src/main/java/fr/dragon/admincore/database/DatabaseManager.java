@@ -9,6 +9,8 @@ import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -83,9 +85,17 @@ public final class DatabaseManager {
         hikariConfig.setLeakDetectionThreshold(30_000L);
         hikariConfig.setMaximumPoolSize(config.useMySql() ? config.poolSize() : 1);
         if (config.useMySql()) {
+            final List<String> parameters = new ArrayList<>();
+            parameters.add("serverTimezone=UTC");
+            parameters.add("sslMode=" + this.configLoader.config().getString("database.mysql.ssl-mode", "PREFERRED"));
+            if (this.configLoader.config().contains("database.mysql.allow-public-key-retrieval")) {
+                parameters.add("allowPublicKeyRetrieval=" + this.configLoader.config().getBoolean("database.mysql.allow-public-key-retrieval", false));
+            } else {
+                parameters.add("allowPublicKeyRetrieval=false");
+            }
             hikariConfig.setJdbcUrl(
                 "jdbc:mysql://" + config.host() + ":" + config.port() + "/" + config.database()
-                    + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+                    + "?" + String.join("&", parameters)
             );
             hikariConfig.setUsername(config.username());
             hikariConfig.setPassword(config.password());

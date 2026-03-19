@@ -5,7 +5,7 @@ AdminCore est un plugin staff pour Paper 1.21.8, structure par modules (`core`, 
 ## Installation
 
 1. Compiler avec `mvn package`.
-2. Copier dans `plugins/` soit `target/admincore-0.1.0-SNAPSHOT.jar`, soit le jar versionne dans `versions/DragonGestion-1.0.X/`.
+2. Copier dans `plugins/` soit `target/admincore-0.1.0-SNAPSHOT.jar`, soit le jar versionne dans `versions/DragonGestion-X.Y.Z/`.
 3. Ne pas utiliser `target/original-*.jar`, c'est l'artefact intermediaire non deployable.
 4. Demarrer le serveur pour generer `config.yml` et `messages.yml`.
 5. Configurer la base de donnees:
@@ -89,6 +89,12 @@ Chaque `mvn package`:
 
 - incremente automatiquement la version de build `DragonGestion` (`1.0.0` -> `1.0.1` -> `1.0.2`, etc.)
 - met a jour la `version` embarquee dans `plugin.yml`
-- sort le jar final dans `versions/DragonGestion-1.0.X/DragonGestion-1.0.X.jar`
+- sort le jar final dans `versions/DragonGestion-X.Y.Z/DragonGestion-X.Y.Z.jar`
+- met a jour `versions/RELEASES.txt` et le lien `versions/latest`
+
+Pour forcer une version explicite LTS ou release:
+
+- ajouter `nextVersionOverride=1.1.0` dans [.dragon-build.properties](/home/pypoo73/Documents/plugin/DragonGestion/.dragon-build.properties), ou
+- lancer `DRAGON_BUILD_VERSION=1.1.0 mvn package`
 
 L'etat de version est stocke dans [.dragon-build.properties](/home/pypoo73/Documents/plugin/DragonGestion/.dragon-build.properties).
