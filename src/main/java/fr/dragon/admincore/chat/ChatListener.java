@@ -23,15 +23,19 @@ public final class ChatListener implements Listener {
             event.setCancelled(true);
             return;
         }
-        final ChatGuardResult result = this.plugin.getChatService().canTalk(event.getPlayer());
+        final ChatGuardResult result = this.plugin.getChatService().canTalk(event.getPlayer(), plainMessage);
         if (!result.allowed()) {
             event.setCancelled(true);
             this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
-                event.getPlayer().sendMessage(this.plugin.getMessageFormatter().message(result.messageKey()))
+                event.getPlayer().sendMessage(this.plugin.getMessageFormatter().message(
+                    result.messageKey(),
+                    this.plugin.getMessageFormatter().text("time", result.detail()),
+                    this.plugin.getMessageFormatter().text("word", result.detail())
+                ))
             );
             return;
         }
-        this.plugin.getChatService().markMessage(event.getPlayer());
+        this.plugin.getChatService().markMessage(event.getPlayer(), plainMessage);
     }
 
     @EventHandler

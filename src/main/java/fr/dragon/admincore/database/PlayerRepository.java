@@ -18,15 +18,17 @@ public final class PlayerRepository {
         this.databaseManager = databaseManager;
     }
 
-    public java.util.concurrent.CompletableFuture<Void> upsert(final UUID uuid, final String name, final String ip) {
+    public java.util.concurrent.CompletableFuture<Void> upsert(final UUID uuid, final String name, final String ip, final String clientBrand, final int level) {
         return this.databaseManager.execute(connection -> {
             final long now = Instant.now().toEpochMilli();
             try (PreparedStatement playerStatement = connection.prepareStatement("""
-                INSERT INTO players (uuid, last_name, last_ip, first_seen, last_seen)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO players (uuid, last_name, last_ip, last_client_brand, last_level, first_seen, last_seen)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(uuid) DO UPDATE SET
                     last_name = excluded.last_name,
                     last_ip = excluded.last_ip,
+                    last_client_brand = excluded.last_client_brand,
+                    last_level = excluded.last_level,
                     last_seen = excluded.last_seen
                 """);
                  PreparedStatement ipStatement = connection.prepareStatement("""
@@ -36,8 +38,10 @@ public final class PlayerRepository {
                 playerStatement.setString(1, uuid.toString());
                 playerStatement.setString(2, name);
                 playerStatement.setString(3, ip);
-                playerStatement.setLong(4, now);
-                playerStatement.setLong(5, now);
+                playerStatement.setString(4, clientBrand);
+                playerStatement.setInt(5, level);
+                playerStatement.setLong(6, now);
+                playerStatement.setLong(7, now);
                 playerStatement.executeUpdate();
 
                 ipStatement.setString(1, uuid.toString());
@@ -84,6 +88,122 @@ public final class PlayerRepository {
                 throw new IllegalStateException("Impossible de lire les comptes lies a l'IP", exception);
             }
         });
+    }
+
+    public java.util.concurrent.CompletableFuture<List<String>> searchNames(final String query, final int limit) {
+        return this.databaseManager.query(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT DISTINCT last_name
+                FROM players
+                WHERE LOWER(last_name) LIKE LOWER(?)
+                ORDER BY last_seen DESC
+                LIMIT ?
+                """)) {
+                statement.setString(1, query + "%");
+                statement.setInt(2, limit);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    final List<String> matches = new ArrayList<>();
+                    while (resultSet.next()) {
+                        matches.add(resultSet.getString("last_name"));
+                    }
+                    return matches;
+                }
+            } catch (final Exception exception) {
+                throw new IllegalStateException("Impossible de rechercher les pseudos", exception);
+            }
+        });
+    }
+
+    public java.util.concurrent.CompletableFuture<List<PlayerProfile>> listProfiles(final int offset, final int limit) {
+        return this.databaseManager.query(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT p.uuid, p.last_name, p.last_ip, p.last_client_brand, p.last_level,
+                       COUNT(s.id) AS sanction_count
+                FROM players p
+                LEFT JOIN sanctions s
+                    ON ((s.target_uuid IS NOT NULL AND s.target_uuid = p.uuid) OR LOWER(s.target_name) = LOWER(p.last_name))
+                GROUP BY p.uuid, p.last_name, p.last_ip, p.last_client_brand, p.last_level, p.last_seen
+                ORDER BY p.last_seen DESC
+                LIMIT ? OFFSET ?
+                """)) {
+                statement.setInt(1, limit);
+                statement.setInt(2, offset);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    final List<PlayerProfile> profiles = new ArrayList<>();
+                    while (resultSet.next()) {
+                        final String uuid = resultSet.getString("uuid");
+                        profiles.add(new PlayerProfile(
+                            uuid == null ? null : UUID.fromString(uuid),
+                            resultSet.getString("last_name"),
+                            resultSet.getString("last_ip"),
+                            resultSet.getString("last_client_brand"),
+                            resultSet.getInt("last_level"),
+                            resultSet.getInt("sanction_count"),
+                            List.of()
+                        ));
+                    }
+                    return profiles;
+                }
+            } catch (final Exception exception) {
+                throw new IllegalStateException("Impossible de lister les profils", exception);
+            }
+        });
+    }
+
+    public java.util.concurrent.CompletableFuture<PlayerProfile> profile(final UUID targetUuid, final String targetName) {
+        return this.databaseManager.query(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT p.uuid, p.last_name, p.last_ip, p.last_client_brand, p.last_level,
+                       COUNT(s.id) AS sanction_count
+                FROM players p
+                LEFT JOIN sanctions s
+                    ON ((s.target_uuid IS NOT NULL AND s.target_uuid = p.uuid) OR LOWER(s.target_name) = LOWER(p.last_name))
+                WHERE (p.uuid = ?) OR LOWER(p.last_name) = LOWER(?)
+                GROUP BY p.uuid, p.last_name, p.last_ip, p.last_client_brand, p.last_level
+                LIMIT 1
+                """)) {
+                statement.setString(1, targetUuid == null ? null : targetUuid.toString());
+                statement.setString(2, targetName);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (!resultSet.next()) {
+                        return new PlayerProfile(targetUuid, targetName, null, null, 0, 0, List.of());
+                    }
+                    final String uuid = resultSet.getString("uuid");
+                    final List<String> types = sanctionTypes(connection, uuid, resultSet.getString("last_name"));
+                    return new PlayerProfile(
+                        uuid == null ? null : UUID.fromString(uuid),
+                        resultSet.getString("last_name"),
+                        resultSet.getString("last_ip"),
+                        resultSet.getString("last_client_brand"),
+                        resultSet.getInt("last_level"),
+                        resultSet.getInt("sanction_count"),
+                        types
+                    );
+                }
+            } catch (final Exception exception) {
+                throw new IllegalStateException("Impossible de lire le profil joueur", exception);
+            }
+        });
+    }
+
+    private List<String> sanctionTypes(final java.sql.Connection connection, final String uuid, final String name) throws Exception {
+        try (PreparedStatement statement = connection.prepareStatement("""
+            SELECT DISTINCT type
+            FROM sanctions
+            WHERE ((target_uuid IS NOT NULL AND target_uuid = ?) OR LOWER(target_name) = LOWER(?))
+            ORDER BY created_at DESC
+            LIMIT 5
+            """)) {
+            statement.setString(1, uuid);
+            statement.setString(2, name);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                final List<String> types = new ArrayList<>();
+                while (resultSet.next()) {
+                    types.add(resultSet.getString("type"));
+                }
+                return types;
+            }
+        }
     }
 
     public java.util.concurrent.CompletableFuture<List<String>> findAlts(final UUID targetUuid, final String targetName) {

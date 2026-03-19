@@ -22,13 +22,13 @@ public final class PlayerPickerDialog {
         for (final Player player : players) {
             actions.add(DialogHelper.button(
                 Component.text(player.getName()),
-                120,
+                60,
                 DialogAction.customClick((response, audience) -> callback.accept(player), DialogHelper.singleUseOptions())
             ));
         }
         return DialogHelper.create(
             Component.text(title),
-            List.of(DialogBody.plainMessage(Component.text("Selectionne un joueur en ligne."), 220)),
+            List.of(DialogBody.plainMessage(Component.text("Selectionne un joueur en ligne."), 170)),
             List.of(),
             DialogType.multiAction(actions, null, 3)
         );

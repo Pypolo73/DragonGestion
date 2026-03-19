@@ -4,6 +4,9 @@ main: fr.dragon.admincore.core.AdminCorePlugin
 api-version: "1.21"
 author: OpenAI
 description: Plugin staff modulaire Paper 1.21.8 avec compatibilite StaffPlusPlus API
+softdepend:
+  - AxInventoryRestore
+  - LuckPerms
 
 commands:
   tempban:
@@ -50,6 +53,9 @@ commands:
     description: Nettoyer le chat
     usage: /clearchat [type]
     permission: admincore.clearchat
+  chat:
+    description: Gestion rapide du chat
+    usage: /chat <clear|slowmode|lock|muteall|broadcast>
   slowmode:
     description: Activer le slowmode
     usage: /slowmode <secondes|off>
@@ -70,6 +76,10 @@ commands:
     description: Basculer en staffmode
     usage: /staffmode
     permission: admincore.staffmode
+  staff:
+    description: Gestion du staff et des validations
+    usage: /staff <add|remove|list|pending|approve|deny>
+    permission: admincore.staff
   vanish:
     description: Vanish
     usage: /vanish [joueur]
@@ -120,8 +130,12 @@ commands:
     permission: admincore.checkvpn
   admincore:
     description: Administration plugin
-    usage: /admincore <reload|debug|db export>
+    usage: /admincore <reload|debug|db export|pending|approve|deny>
     permission: admincore.admin
+  inventory:
+    description: Voir ou modifier l'inventaire d'un joueur
+    usage: /inventory <joueur>
+    permission: admincore.inventory.view
 
 permissions:
   admincore.*:
@@ -156,6 +170,9 @@ permissions:
       admincore.notes: true
       admincore.ipban: true
       admincore.checkvpn: true
+      admincore.inventory.view: true
+      admincore.inventory.edit: true
+      admincore.inventory.backup: true
       admincore.admin: true
       admincore.chat.bypass: true
       admincore.freeze.bypass: true
@@ -218,6 +235,16 @@ permissions:
     default: op
   admincore.checkvpn:
     default: op
+  admincore.inventory.view:
+    default: op
+  admincore.inventory.edit:
+    default: op
+    children:
+      admincore.inventory.view: true
+  admincore.inventory.backup:
+    default: op
+    children:
+      admincore.inventory.view: true
   admincore.admin:
     default: op
   admincore.chat.bypass:

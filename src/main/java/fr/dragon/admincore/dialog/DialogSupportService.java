@@ -10,7 +10,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
@@ -19,6 +18,12 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
 public final class DialogSupportService {
+
+    public record ReasonFlowResult(String reason, String actorLabel) {
+    }
+
+    public record TimedReasonFlowResult(String reason, Duration duration, String actorLabel) {
+    }
 
     private final AdminCorePlugin plugin;
     private final ConfigLoader configLoader;
@@ -46,19 +51,9 @@ public final class DialogSupportService {
         return brand == null || blocked.stream().noneMatch(entry -> brand.toLowerCase(Locale.ROOT).contains(entry.toLowerCase(Locale.ROOT)));
     }
 
-    public void openReasonFlow(final Player player, final String title, final Consumer<String> onConfirm) {
+    public void openReasonFlow(final Player player, final String title, final Consumer<ReasonFlowResult> onConfirm) {
         if (supportsDialogs(player)) {
-            player.showDialog(ReasonDialog.create(title, "Suivant ->", "", (response, audience) -> {
-                final String reason = sanitizeReason(response.getText("reason"));
-                player.showDialog(ConfirmDialog.create(
-                    title,
-                    List.of(Component.text("Raison : " + reason)),
-                    "Confirmer",
-                    "Retour",
-                    (confirmResponse, confirmAudience) -> onConfirm.accept(reason),
-                    (backResponse, backAudience) -> openReasonFlow(player, title, onConfirm)
-                ));
-            }));
+            openReasonSelection(player, title, onConfirm);
             return;
         }
         chatPromptService.start(player, new ChatPromptService.Session() {
@@ -77,19 +72,16 @@ public final class DialogSupportService {
                     return true;
                 }
                 if ("confirm".equalsIgnoreCase(input)) {
-                    onConfirm.accept(this.reason);
+                    onConfirm.accept(new ReasonFlowResult(this.reason, actor.getName()));
                 }
                 return false;
             }
         });
     }
 
-    public void openTimedReasonFlow(final Player player, final String actionTitle, final BiConsumer<String, Duration> onConfirm) {
+    public void openTimedReasonFlow(final Player player, final String actionTitle, final Consumer<TimedReasonFlowResult> onConfirm) {
         if (supportsDialogs(player)) {
-            player.showDialog(ReasonDialog.create(actionTitle, "Suivant ->", "", (reasonResponse, audience) -> {
-                final String reason = sanitizeReason(reasonResponse.getText("reason"));
-                openDurationDialog(player, actionTitle, reason, 1, "minutes", onConfirm);
-            }));
+            openTimedReasonSelection(player, actionTitle, onConfirm);
             return;
         }
         chatPromptService.start(player, new ChatPromptService.Session() {
@@ -110,7 +102,7 @@ public final class DialogSupportService {
                 final Duration duration = TimeParser.parse(input).orElse(Duration.ofHours(1));
                 actor.sendMessage(formatter.message("dialogs.chat-prompt-confirm",
                     formatter.text("value", this.reason + " / " + TimeParser.format(duration))));
-                onConfirm.accept(this.reason, duration);
+                onConfirm.accept(new TimedReasonFlowResult(this.reason, duration, actor.getName()));
                 return false;
             }
         });
@@ -165,38 +157,189 @@ public final class DialogSupportService {
         final Player player,
         final String title,
         final String reason,
-        final int initialAmount,
-        final String initialUnit,
-        final BiConsumer<String, Duration> onConfirm
+        final String initialValue,
+        final Consumer<TimedReasonFlowResult> onConfirm
     ) {
         player.showDialog(DurationDialog.create(
             "Duree de la sanction",
-            initialAmount,
-            initialUnit,
+            initialValue,
             (response, audience) -> {
-                final int amount = Math.max(1, Math.round(response.getFloat("amount") == null ? 1.0F : response.getFloat("amount")));
-                final String unit = response.getText("unit") == null ? "minutes" : response.getText("unit");
-                final Duration duration = switch (unit.toLowerCase(Locale.ROOT)) {
-                    case "hours" -> Duration.ofHours(amount);
-                    case "days" -> Duration.ofDays(amount);
-                    case "weeks" -> Duration.ofDays(amount * 7L);
-                    case "months" -> Duration.ofDays(amount * 30L);
-                    default -> Duration.ofMinutes(amount);
-                };
-                player.showDialog(ConfirmDialog.create(
-                    title,
-                    List.of(
-                        Component.text("Raison : " + reason),
-                        Component.text("Duree : " + TimeParser.format(duration))
-                    ),
-                    "Confirmer",
-                    "Retour",
-                    (confirmResponse, confirmAudience) -> onConfirm.accept(reason, duration),
-                    (backResponse, backAudience) -> openDurationDialog(player, title, reason, amount, unit, onConfirm)
-                ));
+                final String rawDuration = response.getText("duration") == null ? initialValue : response.getText("duration").trim();
+                final Duration duration = TimeParser.parse(rawDuration).orElse(null);
+                if (duration == null) {
+                    player.sendMessage(this.formatter.message("errors.invalid-duration"));
+                    openDurationDialog(player, title, reason, initialValue, onConfirm);
+                    return;
+                }
+                openTimedConfirm(player, title, reason, duration, player.getName(), rawDuration, onConfirm);
             },
-            (response, audience) -> audience.sendMessage(Component.text("Action annulee."))
+            (response, audience) -> openTimedDurationSelection(player, title, reason, onConfirm)
         ));
+    }
+
+    private void openReasonConfirm(
+        final Player player,
+        final String title,
+        final String reason,
+        final String actorLabel,
+        final Consumer<ReasonFlowResult> onConfirm
+    ) {
+        player.showDialog(SanctionConfirmDialog.create(
+            title,
+            List.of(
+                Component.text("Raison : " + reason),
+                Component.text("Par : " + actorLabel)
+            ),
+            (confirmResponse, confirmAudience) -> onConfirm.accept(new ReasonFlowResult(reason, actorLabel)),
+            (actorResponse, actorAudience) -> openReasonActorChoice(player, title, reason, actorLabel, onConfirm),
+            (backResponse, backAudience) -> openReasonSelection(player, title, onConfirm)
+        ));
+    }
+
+    private void openReasonActorChoice(
+        final Player player,
+        final String title,
+        final String reason,
+        final String actorLabel,
+        final Consumer<ReasonFlowResult> onConfirm
+    ) {
+        player.showDialog(SanctionActorChoiceDialog.create(
+            "Affichage du staff",
+            player.getName(),
+            (response, audience) -> openReasonConfirm(player, title, reason, "Decision staff", onConfirm),
+            (response, audience) -> openReasonConfirm(player, title, reason, "Non precise", onConfirm),
+            (response, audience) -> openReasonConfirm(player, title, reason, player.getName(), onConfirm),
+            (response, audience) -> openReasonConfirm(player, title, reason, actorLabel, onConfirm)
+        ));
+    }
+
+    private void openTimedConfirm(
+        final Player player,
+        final String title,
+        final String reason,
+        final Duration duration,
+        final String actorLabel,
+        final String durationValue,
+        final Consumer<TimedReasonFlowResult> onConfirm
+    ) {
+        player.showDialog(SanctionConfirmDialog.create(
+            title,
+            List.of(
+                Component.text("Raison : " + reason),
+                Component.text("Duree : " + TimeParser.format(duration)),
+                Component.text("Par : " + actorLabel)
+            ),
+            (confirmResponse, confirmAudience) -> onConfirm.accept(new TimedReasonFlowResult(reason, duration, actorLabel)),
+            (actorResponse, actorAudience) -> openTimedActorChoice(player, title, reason, duration, actorLabel, durationValue, onConfirm),
+            (backResponse, backAudience) -> openTimedDurationSelection(player, title, reason, onConfirm)
+        ));
+    }
+
+    private void openTimedActorChoice(
+        final Player player,
+        final String title,
+        final String reason,
+        final Duration duration,
+        final String actorLabel,
+        final String durationValue,
+        final Consumer<TimedReasonFlowResult> onConfirm
+    ) {
+        player.showDialog(SanctionActorChoiceDialog.create(
+            "Affichage du staff",
+            player.getName(),
+            (response, audience) -> openTimedConfirm(player, title, reason, duration, "Decision staff", durationValue, onConfirm),
+            (response, audience) -> openTimedConfirm(player, title, reason, duration, "Non precise", durationValue, onConfirm),
+            (response, audience) -> openTimedConfirm(player, title, reason, duration, player.getName(), durationValue, onConfirm),
+            (response, audience) -> openTimedConfirm(player, title, reason, duration, actorLabel, durationValue, onConfirm)
+        ));
+    }
+
+    private void openReasonSelection(final Player player, final String title, final Consumer<ReasonFlowResult> onConfirm) {
+        final List<String> presets = presetValues("sanctions.presets.reasons", 6);
+        if (presets.isEmpty()) {
+            openReasonTextEntry(player, title, onConfirm);
+            return;
+        }
+        player.showDialog(PresetChoiceDialog.create(
+            title,
+            "Choisis une raison rapide ou saisis-la manuellement.",
+            presets,
+            preset -> openReasonConfirm(player, title, sanitizeReason(preset), player.getName(), onConfirm),
+            "Raison perso",
+            () -> openReasonTextEntry(player, title, onConfirm),
+            "Annuler",
+            () -> player.sendMessage(this.formatter.message("dialogs.action-cancelled"))
+        ));
+    }
+
+    private void openReasonTextEntry(final Player player, final String title, final Consumer<ReasonFlowResult> onConfirm) {
+        player.showDialog(ReasonDialog.create(title, "Suivant ->", "", (response, audience) -> {
+            final String reason = sanitizeReason(response.getText("reason"));
+            openReasonConfirm(player, title, reason, player.getName(), onConfirm);
+        }));
+    }
+
+    private void openTimedReasonSelection(final Player player, final String title, final Consumer<TimedReasonFlowResult> onConfirm) {
+        final List<String> presets = presetValues("sanctions.presets.reasons", 6);
+        if (presets.isEmpty()) {
+            openTimedReasonTextEntry(player, title, onConfirm);
+            return;
+        }
+        player.showDialog(PresetChoiceDialog.create(
+            title,
+            "Choisis une raison rapide avant de definir la duree.",
+            presets,
+            preset -> openTimedDurationSelection(player, title, sanitizeReason(preset), onConfirm),
+            "Raison perso",
+            () -> openTimedReasonTextEntry(player, title, onConfirm),
+            "Annuler",
+            () -> player.sendMessage(this.formatter.message("dialogs.action-cancelled"))
+        ));
+    }
+
+    private void openTimedReasonTextEntry(final Player player, final String title, final Consumer<TimedReasonFlowResult> onConfirm) {
+        player.showDialog(ReasonDialog.create(title, "Suivant ->", "", (reasonResponse, audience) -> {
+            final String reason = sanitizeReason(reasonResponse.getText("reason"));
+            openTimedDurationSelection(player, title, reason, onConfirm);
+        }));
+    }
+
+    private void openTimedDurationSelection(final Player player, final String title, final String reason, final Consumer<TimedReasonFlowResult> onConfirm) {
+        final List<String> presets = presetValues("sanctions.presets.durations", 6);
+        if (presets.isEmpty()) {
+            openDurationDialog(player, title, reason, "1h", onConfirm);
+            return;
+        }
+        player.showDialog(PresetChoiceDialog.create(
+            "Duree de la sanction",
+            "Choisis une duree rapide ou saisis une duree libre.",
+            presets,
+            preset -> {
+                final Duration duration = TimeParser.parse(preset).orElse(null);
+                if (duration == null) {
+                    player.sendMessage(this.formatter.message("errors.invalid-duration"));
+                    openTimedDurationSelection(player, title, reason, onConfirm);
+                    return;
+                }
+                openTimedConfirm(player, title, reason, duration, player.getName(), preset, onConfirm);
+            },
+            "Duree perso",
+            () -> openDurationDialog(player, title, reason, firstDurationPreset(), onConfirm),
+            "Retour",
+            () -> openTimedReasonSelection(player, title, onConfirm)
+        ));
+    }
+
+    private List<String> presetValues(final String path, final int limit) {
+        return this.configLoader.config().getStringList(path).stream()
+            .filter(value -> value != null && !value.isBlank())
+            .limit(limit)
+            .toList();
+    }
+
+    private String firstDurationPreset() {
+        final List<String> presets = presetValues("sanctions.presets.durations", 1);
+        return presets.isEmpty() ? "1h" : presets.getFirst();
     }
 
     private String sanitizeReason(final String raw) {

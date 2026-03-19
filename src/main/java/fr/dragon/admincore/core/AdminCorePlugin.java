@@ -16,7 +16,11 @@ import fr.dragon.admincore.database.SanctionRepository;
 import fr.dragon.admincore.dialog.ChatPromptService;
 import fr.dragon.admincore.dialog.DialogSupportService;
 import fr.dragon.admincore.gui.GuiListener;
+import fr.dragon.admincore.inventory.InventoryCommand;
+import fr.dragon.admincore.inventory.InventoryListener;
+import fr.dragon.admincore.inventory.InventoryManagerService;
 import fr.dragon.admincore.sanctions.ConnectionSanctionListener;
+import fr.dragon.admincore.sanctions.SanctionApprovalService;
 import fr.dragon.admincore.sanctions.SanctionCommand;
 import fr.dragon.admincore.sanctions.SanctionService;
 import fr.dragon.admincore.sanctions.SanctionServiceImpl;
@@ -42,6 +46,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitTask;
 
 public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
 
@@ -50,12 +55,16 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
     private PermissionService permissionService;
     private DatabaseManager databaseManager;
     private PlayerSessionManager playerSessionManager;
+    private StaffAccessService staffAccessService;
     private SanctionService sanctionService;
+    private SanctionApprovalService sanctionApprovalService;
     private ChatService chatService;
     private VanishService vanishService;
     private StaffModeService staffModeService;
     private ChatPromptService chatPromptService;
     private DialogSupportService dialogSupportService;
+    private InventoryManagerService inventoryManagerService;
+    private BukkitTask runtimeRefreshTask;
 
     private StaffChatService staffChatService;
     private BanService banService;
@@ -71,6 +80,7 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
         this.messageFormatter = new MessageFormatter(this.configLoader);
         this.permissionService = new PermissionService(this.messageFormatter);
         this.playerSessionManager = new PlayerSessionManager();
+        this.staffAccessService = new StaffAccessService(this, this.configLoader);
 
         this.databaseManager = new DatabaseManager(this, this.configLoader);
         this.databaseManager.start();
@@ -78,12 +88,14 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
         final SanctionRepository sanctionRepository = new SanctionRepository(this.databaseManager);
         final PlayerRepository playerRepository = new PlayerRepository(this.databaseManager);
         final NoteRepository noteRepository = new NoteRepository(this.databaseManager);
-        this.sanctionService = new SanctionServiceImpl(this.databaseManager, sanctionRepository, playerRepository, noteRepository);
+        this.sanctionService = new SanctionServiceImpl(this.databaseManager, sanctionRepository, playerRepository, noteRepository, this.configLoader);
+        this.sanctionApprovalService = new SanctionApprovalService(this);
         this.chatService = new ChatServiceImpl(this.configLoader, this.messageFormatter);
         this.vanishService = new VanishServiceImpl(this);
         this.staffModeService = new StaffModeServiceImpl(this.playerSessionManager, this.vanishService);
         this.chatPromptService = new ChatPromptService(this, this.messageFormatter);
         this.dialogSupportService = new DialogSupportService(this, this.configLoader, this.messageFormatter, this.chatPromptService);
+        this.inventoryManagerService = new InventoryManagerService(this);
 
         this.staffChatService = new StaffPlusPlusStaffChatAdapter(this.chatService);
         this.banService = new StaffPlusPlusBanServiceAdapter(this, this.sanctionService);
@@ -96,6 +108,10 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
 
         registerCommands();
         registerListeners();
+        scheduleRuntimeRefreshTask();
+        for (final var online : Bukkit.getOnlinePlayers()) {
+            this.staffAccessService.refresh(online);
+        }
         getLogger().info("AdminCore active. Compatibilite StaffPlusPlus API chargee.");
     }
 
@@ -103,6 +119,10 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
     public void onDisable() {
         Bukkit.getServicesManager().unregister(IStaffPlus.class, this);
         AdminCoreAPI.clear();
+        if (this.runtimeRefreshTask != null) {
+            this.runtimeRefreshTask.cancel();
+            this.runtimeRefreshTask = null;
+        }
         if (this.databaseManager != null) {
             this.databaseManager.close();
         }
@@ -111,6 +131,10 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
     public void reloadPlugin() {
         this.configLoader.reload();
         this.messageFormatter = new MessageFormatter(this.configLoader);
+        this.permissionService = new PermissionService(this.messageFormatter);
+        this.staffAccessService.reloadStorage();
+        this.inventoryManagerService.reload();
+        scheduleRuntimeRefreshTask();
     }
 
     public ConfigLoader getConfigLoader() {
@@ -129,8 +153,16 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
         return this.playerSessionManager;
     }
 
+    public StaffAccessService getStaffAccessService() {
+        return this.staffAccessService;
+    }
+
     public SanctionService getSanctionService() {
         return this.sanctionService;
+    }
+
+    public SanctionApprovalService getSanctionApprovalService() {
+        return this.sanctionApprovalService;
     }
 
     public ChatService getChatService() {
@@ -153,6 +185,10 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
         return this.chatPromptService;
     }
 
+    public InventoryManagerService getInventoryManagerService() {
+        return this.inventoryManagerService;
+    }
+
     private void registerCommands() {
         final SanctionCommand sanctionCommand = new SanctionCommand(this);
         final SanctionsAdminCommand sanctionsAdminCommand = new SanctionsAdminCommand(this);
@@ -160,6 +196,7 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
         final StaffCommand staffCommand = new StaffCommand(this);
         final VanishCommand vanishCommand = new VanishCommand(this);
         final AdminCoreCommand adminCoreCommand = new AdminCoreCommand(this);
+        final InventoryCommand inventoryCommand = new InventoryCommand(this);
 
         bind("tempban", sanctionCommand);
         bind("tempmute", sanctionCommand);
@@ -181,12 +218,14 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
         bind("checkvpn", sanctionsAdminCommand);
 
         bind("clearchat", chatCommand);
+        bind("chat", chatCommand);
         bind("slowmode", chatCommand);
         bind("chatlock", chatCommand);
         bind("muteall", chatCommand);
         bind("broadcast", chatCommand);
 
         bind("staffmode", staffCommand);
+        bind("staff", staffCommand);
         bind("freeze", staffCommand);
         bind("spy", staffCommand);
         bind("invsee", staffCommand);
@@ -194,13 +233,15 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
 
         bind("vanish", vanishCommand);
         bind("admincore", adminCoreCommand);
+        bind("inventory", inventoryCommand);
     }
 
     private void registerListeners() {
         Bukkit.getPluginManager().registerEvents(new ConnectionSanctionListener(this), this);
         Bukkit.getPluginManager().registerEvents(new ChatListener(this), this);
         Bukkit.getPluginManager().registerEvents(new StaffModeListener(this), this);
-        Bukkit.getPluginManager().registerEvents(new GuiListener(), this);
+        Bukkit.getPluginManager().registerEvents(new GuiListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new InventoryListener(this), this);
     }
 
     private void bind(final String name, final CommandExecutor executor) {
@@ -213,6 +254,18 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
         if (executor instanceof org.bukkit.command.TabCompleter completer) {
             command.setTabCompleter(completer);
         }
+    }
+
+    private void scheduleRuntimeRefreshTask() {
+        if (this.runtimeRefreshTask != null) {
+            this.runtimeRefreshTask.cancel();
+        }
+        final long seconds = Math.max(10L, this.configLoader.config().getLong("staff.runtime-refresh-seconds", 30L));
+        this.runtimeRefreshTask = Bukkit.getScheduler().runTaskTimer(this, () -> {
+            for (final var online : Bukkit.getOnlinePlayers()) {
+                this.staffAccessService.refresh(online);
+            }
+        }, seconds * 20L, seconds * 20L);
     }
 
     @Override

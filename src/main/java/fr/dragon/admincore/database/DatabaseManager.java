@@ -116,6 +116,8 @@ public final class DatabaseManager {
                     uuid VARCHAR(36) PRIMARY KEY,
                     last_name VARCHAR(32) NOT NULL,
                     last_ip VARCHAR(64),
+                    last_client_brand VARCHAR(64),
+                    last_level INTEGER NOT NULL DEFAULT 0,
                     first_seen BIGINT NOT NULL,
                     last_seen BIGINT NOT NULL
                 )
@@ -142,7 +144,8 @@ public final class DatabaseManager {
                     expires_at BIGINT,
                     active INTEGER NOT NULL,
                     scope VARCHAR(16) NOT NULL,
-                    scope_value VARCHAR(128) NOT NULL
+                    scope_value VARCHAR(128) NOT NULL,
+                    linked_target_uuid VARCHAR(36)
                 )
                 """);
             statement.addBatch("""
@@ -157,9 +160,19 @@ public final class DatabaseManager {
                 )
                 """);
             statement.executeBatch();
+            alterIgnore(statement, "ALTER TABLE players ADD COLUMN last_client_brand VARCHAR(64)");
+            alterIgnore(statement, "ALTER TABLE players ADD COLUMN last_level INTEGER NOT NULL DEFAULT 0");
+            alterIgnore(statement, "ALTER TABLE sanctions ADD COLUMN linked_target_uuid VARCHAR(36)");
         } catch (final SQLException exception) {
             this.plugin.getLogger().log(Level.SEVERE, "Impossible d'initialiser le schema SQL", exception);
             throw new IllegalStateException("Base AdminCore indisponible", exception);
+        }
+    }
+
+    private void alterIgnore(final Statement statement, final String sql) {
+        try {
+            statement.execute(sql);
+        } catch (final SQLException ignored) {
         }
     }
 }

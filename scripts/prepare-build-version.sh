@@ -30,7 +30,7 @@ artifact_name="${artifact_base_name}-${next_version}"
 output_dir="${project_dir}/versions/${artifact_name}"
 output_file="${output_dir}/${artifact_name}.jar"
 
-mkdir -p "${target_dir}" "${output_dir}"
+mkdir -p "${target_dir}"
 
 cat > "${state_file}" <<EOF
 artifactBaseName=${artifact_base_name}

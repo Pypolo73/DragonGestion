@@ -22,12 +22,16 @@ public final class SanctionRepository {
     }
 
     public java.util.concurrent.CompletableFuture<SanctionRecord> insert(final CreateSanctionRequest request) {
+        return insert(request, null);
+    }
+
+    public java.util.concurrent.CompletableFuture<SanctionRecord> insert(final CreateSanctionRequest request, final UUID linkedTargetUuid) {
         return this.databaseManager.query(connection -> {
             final Instant now = Instant.now();
             try (PreparedStatement statement = connection.prepareStatement("""
                 INSERT INTO sanctions (
-                    target_uuid, target_name, actor_uuid, actor_name, type, reason, created_at, expires_at, active, scope, scope_value
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    target_uuid, target_name, actor_uuid, actor_name, type, reason, created_at, expires_at, active, scope, scope_value, linked_target_uuid
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, PreparedStatement.RETURN_GENERATED_KEYS)) {
                 statement.setString(1, request.targetUuid() == null ? null : request.targetUuid().toString());
                 statement.setString(2, request.targetName());
@@ -44,6 +48,7 @@ public final class SanctionRepository {
                 statement.setInt(9, request.type() == SanctionType.KICK ? 0 : 1);
                 statement.setString(10, request.scope().name());
                 statement.setString(11, request.scopeValue());
+                statement.setString(12, linkedTargetUuid == null ? null : linkedTargetUuid.toString());
                 statement.executeUpdate();
                 try (ResultSet keys = statement.getGeneratedKeys()) {
                     final long id = keys.next() ? keys.getLong(1) : -1L;
@@ -86,6 +91,24 @@ public final class SanctionRepository {
         });
     }
 
+    public java.util.concurrent.CompletableFuture<Integer> deactivateLinkedIp(final SanctionType type, final UUID linkedTargetUuid) {
+        return this.databaseManager.query(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                UPDATE sanctions
+                SET active = 0
+                WHERE type = ? AND active = 1
+                  AND scope = 'IP'
+                  AND linked_target_uuid = ?
+                """)) {
+                statement.setString(1, type.name());
+                statement.setString(2, linkedTargetUuid == null ? null : linkedTargetUuid.toString());
+                return statement.executeUpdate();
+            } catch (final Exception exception) {
+                throw new IllegalStateException("Desactivation des sanctions IP liees impossible", exception);
+            }
+        });
+    }
+
     public java.util.concurrent.CompletableFuture<Optional<SanctionRecord>> findActive(
         final UUID targetUuid,
         final String targetName,
@@ -103,7 +126,7 @@ public final class SanctionRepository {
                       (scope = 'PLAYER' AND ((target_uuid IS NOT NULL AND target_uuid = ?) OR LOWER(target_name) = LOWER(?)))
                       OR (scope = 'IP' AND scope_value = ?)
                   )
-                ORDER BY created_at DESC
+                ORDER BY CASE WHEN scope = 'PLAYER' THEN 0 ELSE 1 END ASC, created_at DESC
                 LIMIT 1
                 """.formatted(placeholders))) {
                 int index = 1;
@@ -200,6 +223,29 @@ public final class SanctionRepository {
                 return entries;
             } catch (final Exception exception) {
                 throw new IllegalStateException("Export des sanctions impossible", exception);
+            }
+        });
+    }
+
+    public java.util.concurrent.CompletableFuture<List<SanctionRecord>> recentActive(final int limit) {
+        return this.databaseManager.query(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT *
+                FROM sanctions
+                WHERE active = 1
+                ORDER BY created_at DESC
+                LIMIT ?
+                """)) {
+                statement.setInt(1, limit);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    final List<SanctionRecord> entries = new ArrayList<>();
+                    while (resultSet.next()) {
+                        entries.add(map(resultSet));
+                    }
+                    return entries;
+                }
+            } catch (final Exception exception) {
+                throw new IllegalStateException("Lecture des sanctions actives impossible", exception);
             }
         });
     }

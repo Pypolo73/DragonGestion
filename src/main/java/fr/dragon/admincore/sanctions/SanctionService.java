@@ -1,6 +1,7 @@
 package fr.dragon.admincore.sanctions;
 
 import fr.dragon.admincore.database.NoteRepository;
+import fr.dragon.admincore.database.PlayerProfile;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -27,7 +28,7 @@ public interface SanctionService {
 
     CompletableFuture<Integer> clearWarnings(UUID targetUuid, String targetName);
 
-    CompletableFuture<Void> recordPlayer(UUID uuid, String name, String ip);
+    CompletableFuture<Void> recordPlayer(UUID uuid, String name, String ip, String clientBrand, int level);
 
     CompletableFuture<Void> addNote(UUID targetUuid, String targetName, UUID actorUuid, String actorName, String note);
 
@@ -40,6 +41,14 @@ public interface SanctionService {
     CompletableFuture<List<String>> findAccountsByIp(String ip);
 
     CompletableFuture<List<SanctionRecord>> allSanctions();
+
+    CompletableFuture<List<SanctionRecord>> recentActiveSanctions(int limit);
+
+    CompletableFuture<List<String>> searchPlayerNames(String query, int limit);
+
+    CompletableFuture<List<PlayerProfile>> listProfiles(int offset, int limit);
+
+    CompletableFuture<PlayerProfile> playerProfile(UUID targetUuid, String targetName);
 
     CompletableFuture<Path> exportCsv(Path directory);
 }

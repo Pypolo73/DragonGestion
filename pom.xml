@@ -180,9 +180,30 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <finalName>${dragon.artifact.name}</finalName>
-                            <outputFile>${dragon.output.file}</outputFile>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-versioned-artifact</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <mkdir dir="${dragon.output.dir}" />
+                                <copy file="${project.build.directory}/${project.build.finalName}.jar"
+                                      tofile="${dragon.output.file}"
+                                      overwrite="true" />
+                                <delete file="${project.build.directory}/original-${project.build.finalName}.jar" quiet="true" />
+                            </target>
                         </configuration>
                     </execution>
                 </executions>

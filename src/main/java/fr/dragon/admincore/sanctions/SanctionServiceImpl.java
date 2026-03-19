@@ -2,12 +2,15 @@ package fr.dragon.admincore.sanctions;
 
 import fr.dragon.admincore.database.DatabaseManager;
 import fr.dragon.admincore.database.NoteRepository;
+import fr.dragon.admincore.database.PlayerProfile;
 import fr.dragon.admincore.database.PlayerRepository;
 import fr.dragon.admincore.database.SanctionRepository;
+import fr.dragon.admincore.util.ConfigLoader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +25,7 @@ public final class SanctionServiceImpl implements SanctionService {
     private final SanctionRepository sanctionRepository;
     private final PlayerRepository playerRepository;
     private final NoteRepository noteRepository;
+    private final ConfigLoader configLoader;
     private final Clock clock;
     private final Map<UUID, SanctionRecord> muteCache = new ConcurrentHashMap<>();
     private final Map<UUID, SanctionRecord> banCache = new ConcurrentHashMap<>();
@@ -30,12 +34,14 @@ public final class SanctionServiceImpl implements SanctionService {
         final DatabaseManager databaseManager,
         final SanctionRepository sanctionRepository,
         final PlayerRepository playerRepository,
-        final NoteRepository noteRepository
+        final NoteRepository noteRepository,
+        final ConfigLoader configLoader
     ) {
         this.databaseManager = databaseManager;
         this.sanctionRepository = sanctionRepository;
         this.playerRepository = playerRepository;
         this.noteRepository = noteRepository;
+        this.configLoader = configLoader;
         this.clock = Clock.systemUTC();
     }
 
@@ -45,10 +51,13 @@ public final class SanctionServiceImpl implements SanctionService {
             case BAN, MUTE -> revoke(request.type(), request.targetUuid(), request.targetName());
             default -> CompletableFuture.completedFuture(0);
         };
-        return cleanup.thenCompose(ignored -> this.sanctionRepository.insert(request)).thenApply(record -> {
-            cache(record);
-            return record;
-        });
+        return cleanup
+            .thenCompose(ignored -> createLinkedIpSanction(request))
+            .thenCompose(ignored -> this.sanctionRepository.insert(request))
+            .thenApply(record -> {
+                cache(record);
+                return record;
+            });
     }
 
     @Override
@@ -59,7 +68,13 @@ public final class SanctionServiceImpl implements SanctionService {
         if (type == SanctionType.MUTE && targetUuid != null) {
             this.muteCache.remove(targetUuid);
         }
-        return this.sanctionRepository.deactivate(type, targetUuid, targetName);
+        return this.sanctionRepository.deactivate(type, targetUuid, targetName).thenCompose(updated -> {
+            if (type != SanctionType.BAN || targetUuid == null) {
+                return CompletableFuture.completedFuture(updated);
+            }
+            return this.sanctionRepository.deactivateLinkedIp(type, targetUuid)
+                .thenApply(linkedUpdated -> updated + linkedUpdated);
+        });
     }
 
     @Override
@@ -98,8 +113,8 @@ public final class SanctionServiceImpl implements SanctionService {
     }
 
     @Override
-    public CompletableFuture<Void> recordPlayer(final UUID uuid, final String name, final String ip) {
-        return this.playerRepository.upsert(uuid, name, ip);
+    public CompletableFuture<Void> recordPlayer(final UUID uuid, final String name, final String ip, final String clientBrand, final int level) {
+        return this.playerRepository.upsert(uuid, name, ip, clientBrand, level);
     }
 
     @Override
@@ -136,6 +151,28 @@ public final class SanctionServiceImpl implements SanctionService {
     @Override
     public CompletableFuture<List<SanctionRecord>> allSanctions() {
         return this.sanctionRepository.allSanctions();
+    }
+
+    @Override
+    public CompletableFuture<List<SanctionRecord>> recentActiveSanctions(final int limit) {
+        return this.sanctionRepository.recentActive(limit).thenApply(records ->
+            records.stream().filter(record -> record.isActive(this.clock)).limit(limit).toList()
+        );
+    }
+
+    @Override
+    public CompletableFuture<List<String>> searchPlayerNames(final String query, final int limit) {
+        return this.playerRepository.searchNames(query, limit);
+    }
+
+    @Override
+    public CompletableFuture<List<PlayerProfile>> listProfiles(final int offset, final int limit) {
+        return this.playerRepository.listProfiles(offset, limit);
+    }
+
+    @Override
+    public CompletableFuture<PlayerProfile> playerProfile(final UUID targetUuid, final String targetName) {
+        return this.playerRepository.profile(targetUuid, targetName);
     }
 
     @Override
@@ -207,5 +244,40 @@ public final class SanctionServiceImpl implements SanctionService {
             return "";
         }
         return '"' + value.replace("\"", "\"\"") + '"';
+    }
+
+    private CompletableFuture<Void> createLinkedIpSanction(final CreateSanctionRequest request) {
+        if (request.type() != SanctionType.BAN || request.scope() != SanctionScope.PLAYER) {
+            return CompletableFuture.completedFuture(null);
+        }
+        final boolean enabled = shouldLinkIpBan(request.expiresAt());
+        if (!enabled) {
+            return CompletableFuture.completedFuture(null);
+        }
+        return this.playerRepository.findLatestIp(request.targetName()).thenCompose(optionalIp -> {
+            if (optionalIp.isEmpty() || optionalIp.get().isBlank() || request.targetUuid() == null) {
+                return CompletableFuture.completedFuture(null);
+            }
+            final String ip = optionalIp.get();
+            final CreateSanctionRequest linkedRequest = new CreateSanctionRequest(
+                null,
+                ip,
+                request.actorUuid(),
+                request.actorName(),
+                request.type(),
+                request.reason(),
+                request.expiresAt(),
+                SanctionScope.IP,
+                ip
+            );
+            return this.sanctionRepository.insert(linkedRequest, request.targetUuid()).thenApply(ignored -> null);
+        });
+    }
+
+    private boolean shouldLinkIpBan(final Instant expiresAt) {
+        if (expiresAt == null) {
+            return this.configLoader.config().getBoolean("sanctions.link-ip-on-ban", true);
+        }
+        return this.configLoader.config().getBoolean("sanctions.link-ip-on-tempban", true);
     }
 }

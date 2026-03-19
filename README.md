@@ -5,12 +5,13 @@ AdminCore est un plugin staff pour Paper 1.21.8, structure par modules (`core`, 
 ## Installation
 
 1. Compiler avec `mvn package`.
-2. Copier le jar genere dans `plugins/`.
-3. Demarrer le serveur pour generer `config.yml` et `messages.yml`.
-4. Configurer la base de donnees:
+2. Copier dans `plugins/` soit `target/admincore-0.1.0-SNAPSHOT.jar`, soit le jar versionne dans `versions/DragonGestion-1.0.X/`.
+3. Ne pas utiliser `target/original-*.jar`, c'est l'artefact intermediaire non deployable.
+4. Demarrer le serveur pour generer `config.yml` et `messages.yml`.
+5. Configurer la base de donnees:
    - `database.type: SQLITE` pour le mode par defaut
    - `database.type: MYSQL` pour MySQL
-5. Redemarrer le serveur.
+6. Redemarrer le serveur.
 
 ## Dialogs
 

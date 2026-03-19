@@ -62,11 +62,25 @@ public final class SanctionsAdminCommand implements CommandExecutor, TabComplete
     private boolean handleRevoke(final CommandSender sender, final String targetName, final SanctionType type) {
         final OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
         this.plugin.getSanctionService().revoke(type, target.getUniqueId(), targetName).thenAccept(updated ->
-            sync(() -> sender.sendMessage(this.plugin.getMessageFormatter().message(
-                "sanctions.revoked",
-                this.plugin.getMessageFormatter().text("type", type.name()),
-                this.plugin.getMessageFormatter().text("target", targetName)
-            )))
+            sync(() -> {
+                if (updated <= 0) {
+                    sender.sendMessage(this.plugin.getMessageFormatter().message(
+                        "sanctions.revoke-none",
+                        this.plugin.getMessageFormatter().text("type", type.name()),
+                        this.plugin.getMessageFormatter().text("target", targetName)
+                    ));
+                    return;
+                }
+                sender.sendMessage(this.plugin.getMessageFormatter().message(
+                    "sanctions.revoked",
+                    this.plugin.getMessageFormatter().text("type", type.name()),
+                    this.plugin.getMessageFormatter().text("target", targetName)
+                ));
+                final Player online = target.getPlayer();
+                if (online != null) {
+                    this.plugin.getStaffAccessService().refresh(online);
+                }
+            })
         );
         return true;
     }
@@ -123,13 +137,25 @@ public final class SanctionsAdminCommand implements CommandExecutor, TabComplete
         }
         final CompletableFuture<Optional<String>> ipFuture = this.plugin.getSanctionService().findLatestIp(target);
         final CompletableFuture<List<SanctionRecord>> historyFuture = this.plugin.getSanctionService().history(Bukkit.getOfflinePlayer(target).getUniqueId(), target, 10);
-        ipFuture.thenCombine(historyFuture, (ip, history) -> {
-            sync(() -> sender.sendMessage(this.plugin.getMessageFormatter().message(
-                "lookup.player-result",
-                this.plugin.getMessageFormatter().text("target", target),
-                this.plugin.getMessageFormatter().text("ip", ip.orElse("inconnue")),
-                this.plugin.getMessageFormatter().text("historyCount", Integer.toString(history.size()))
-            )));
+        final CompletableFuture<fr.dragon.admincore.database.PlayerProfile> profileFuture =
+            this.plugin.getSanctionService().playerProfile(Bukkit.getOfflinePlayer(target).getUniqueId(), target);
+        ipFuture.thenCombine(historyFuture, (ip, history) -> java.util.Map.entry(ip, history)).thenCombine(profileFuture, (entry, profile) -> {
+            sync(() -> {
+                if (entry.getKey().isEmpty() && entry.getValue().isEmpty() && profile.name() == null) {
+                    sender.sendMessage(this.plugin.getMessageFormatter().message("errors.no-player-found"));
+                    return;
+                }
+                sender.sendMessage(this.plugin.getMessageFormatter().message(
+                    "lookup.player-result",
+                    this.plugin.getMessageFormatter().text("target", target),
+                    this.plugin.getMessageFormatter().text("ip", entry.getKey().orElse("inconnue")),
+                    this.plugin.getMessageFormatter().text("historyCount", Integer.toString(entry.getValue().size())),
+                    this.plugin.getMessageFormatter().text("client", profile.clientBrand() == null ? "inconnu" : profile.clientBrand())
+                ));
+                if (sender instanceof Player player) {
+                    HistoryMenu.open(player, target, entry.getValue());
+                }
+            });
             return null;
         });
         return true;
@@ -206,11 +232,16 @@ public final class SanctionsAdminCommand implements CommandExecutor, TabComplete
                 null,
                 SanctionScope.IP,
                 ip
-            ));
-            Bukkit.getOnlinePlayers().stream()
-                .filter(player -> player.getAddress() != null && player.getAddress().getAddress().getHostAddress().equals(ip))
-                .forEach(player -> player.kick(this.plugin.getMessageFormatter().message("sanctions.ipban-kick")));
-            sender.sendMessage(this.plugin.getMessageFormatter().message("sanctions.ipban-applied", this.plugin.getMessageFormatter().text("ip", ip)));
+            )).whenComplete((ignored, throwable) -> sync(() -> {
+                if (throwable != null) {
+                    sender.sendMessage(this.plugin.getMessageFormatter().message("errors.database"));
+                    return;
+                }
+                Bukkit.getOnlinePlayers().stream()
+                    .filter(player -> player.getAddress() != null && player.getAddress().getAddress().getHostAddress().equals(ip))
+                    .forEach(player -> player.kick(this.plugin.getMessageFormatter().message("sanctions.ipban-kick")));
+                sender.sendMessage(this.plugin.getMessageFormatter().message("sanctions.ipban-applied", this.plugin.getMessageFormatter().text("ip", ip)));
+            }));
         }));
         return true;
     }

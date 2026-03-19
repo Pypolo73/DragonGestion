@@ -18,23 +18,36 @@ public final class ConnectionSanctionListener implements Listener {
     @EventHandler
     public void onAsyncPreLogin(final AsyncPlayerPreLoginEvent event) {
         final String ip = event.getAddress().getHostAddress();
-        final var activeBan = this.plugin.getSanctionService().findActiveBan(event.getUniqueId(), event.getName(), ip).join();
-        activeBan.ifPresent(record -> event.disallow(
-            AsyncPlayerPreLoginEvent.Result.KICK_BANNED,
-            SanctionVisuals.banScreen(
-                this.plugin.getMessageFormatter(),
-                record,
-                this.plugin.getMessageFormatter().raw("discord.link", "discord.gg/example")
-            )
-        ));
+        try {
+            final var activeBan = this.plugin.getSanctionService().findActiveBan(event.getUniqueId(), event.getName(), ip).join();
+            activeBan.ifPresent(record -> event.disallow(
+                AsyncPlayerPreLoginEvent.Result.KICK_BANNED,
+                SanctionVisuals.banScreen(
+                    this.plugin.getConfigLoader(),
+                    this.plugin.getMessageFormatter(),
+                    record,
+                    this.plugin.getMessageFormatter().raw("discord.link", "discord.gg/example")
+                )
+            ));
+        } catch (final Exception exception) {
+            this.plugin.getLogger().warning("Verification de ban impossible pour " + event.getName() + ": " + exception.getMessage());
+        }
     }
 
     @EventHandler
     public void onJoin(final PlayerJoinEvent event) {
         final String ip = event.getPlayer().getAddress() == null ? "" : event.getPlayer().getAddress().getAddress().getHostAddress();
+        final String clientBrand = event.getPlayer().getClientBrandName();
+        this.plugin.getStaffAccessService().refresh(event.getPlayer());
         this.plugin.getPlayerSessionManager().updateName(event.getPlayer());
         this.plugin.getVanishService().refreshVisibility(event.getPlayer());
-        this.plugin.getSanctionService().recordPlayer(event.getPlayer().getUniqueId(), event.getPlayer().getName(), ip);
+        this.plugin.getSanctionService().recordPlayer(
+            event.getPlayer().getUniqueId(),
+            event.getPlayer().getName(),
+            ip,
+            clientBrand,
+            event.getPlayer().getLevel()
+        );
         this.plugin.getSanctionService().findActiveMute(event.getPlayer().getUniqueId(), event.getPlayer().getName(), ip).thenAccept(activeMute ->
             activeMute.ifPresent(record -> this.plugin.getServer().getScheduler().runTask(this.plugin, () -> {
                 event.getPlayer().sendActionBar(this.plugin.getMessageFormatter().message("sanctions.mute-actionbar"));
@@ -52,6 +65,8 @@ public final class ConnectionSanctionListener implements Listener {
         if (this.plugin.getVanishService().isVanished(event.getPlayer().getUniqueId())) {
             this.plugin.getVanishService().setVanished(event.getPlayer(), false);
         }
+        this.plugin.getStaffModeService().clearStaffState(event.getPlayer().getUniqueId());
+        this.plugin.getStaffAccessService().clearRuntime(event.getPlayer().getUniqueId());
         this.plugin.getPlayerSessionManager().remove(event.getPlayer().getUniqueId());
     }
 }

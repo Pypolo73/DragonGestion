@@ -5,7 +5,6 @@ import io.papermc.paper.registry.data.dialog.action.DialogAction;
 import io.papermc.paper.registry.data.dialog.action.DialogActionCallback;
 import io.papermc.paper.registry.data.dialog.body.DialogBody;
 import io.papermc.paper.registry.data.dialog.input.DialogInput;
-import io.papermc.paper.registry.data.dialog.input.SingleOptionDialogInput;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
 import java.util.List;
 import net.kyori.adventure.text.Component;
@@ -18,37 +17,25 @@ public final class DurationDialog {
 
     public static Dialog create(
         final String title,
-        final int initialAmount,
-        final String initialUnit,
+        final String initialValue,
         final DialogActionCallback confirmCallback,
         final DialogActionCallback cancelCallback
     ) {
         return DialogHelper.create(
             Component.text(title),
-            List.of(DialogBody.plainMessage(Component.text("Choisis la duree de la sanction."), 260)),
+            List.of(DialogBody.plainMessage(Component.text("Saisis une duree libre. Exemples: 30m, 1h, 3d, 1w, 1mo."), 280)),
             List.of(
-                DialogInput.numberRange("amount", Component.text("Valeur"), 1.0F, 9_999.0F)
-                    .width(260)
-                    .labelFormat("%s: %s")
-                    .initial((float) initialAmount)
-                    .step(1.0F)
-                    .build(),
-                DialogInput.singleOption(
-                    "unit",
-                    Component.text("Unite"),
-                    List.of(
-                        SingleOptionDialogInput.OptionEntry.create("minutes", Component.text("Minutes"), "minutes".equalsIgnoreCase(initialUnit)),
-                        SingleOptionDialogInput.OptionEntry.create("hours", Component.text("Heures"), "hours".equalsIgnoreCase(initialUnit)),
-                        SingleOptionDialogInput.OptionEntry.create("days", Component.text("Jours"), "days".equalsIgnoreCase(initialUnit)),
-                        SingleOptionDialogInput.OptionEntry.create("weeks", Component.text("Semaines"), "weeks".equalsIgnoreCase(initialUnit)),
-                        SingleOptionDialogInput.OptionEntry.create("months", Component.text("Mois"), "months".equalsIgnoreCase(initialUnit))
-                    )
-                ).width(260).labelVisible(true).build()
+                DialogInput.text("duration", Component.text("Duree"))
+                    .width(240)
+                    .labelVisible(true)
+                    .initial(initialValue)
+                    .maxLength(12)
+                    .build()
             ),
             DialogType.confirmation(
                 DialogHelper.button(
-                    Component.text("Confirmer le bannissement", TextColor.color(0xCC3333)),
-                    180,
+                    Component.text("Confirmer", TextColor.color(0xCC3333)),
+                    160,
                     DialogAction.customClick(confirmCallback, DialogHelper.singleUseOptions())
                 ),
                 DialogHelper.button(

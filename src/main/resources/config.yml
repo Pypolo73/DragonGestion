@@ -24,12 +24,76 @@ dialogs:
 
 sanctions:
   default-reason: "Aucune raison fournie"
+  link-ip-on-ban: true
+  link-ip-on-tempban: true
+  presets:
+    reasons:
+      - "xray"
+      - "cheat"
+      - "autre"
+      - "insulte"
+      - "rage"
+      - "spam"
+    durations:
+      - "1h"
+      - "12h"
+      - "1d"
+      - "3d"
+      - "1w"
+      - "1mo"
+  login-ban-screen:
+    - "<gradient:#ffe45e:#ff9f1c><bold>DragonGestion</bold></gradient>"
+    - "<#d83bff>Ton acces au serveur est suspendu.</#d83bff>"
+    - ""
+    - "<#d83bff>Joueur :</#d83bff> <white><target></white>"
+    - "<#d83bff>Raison :</#d83bff> <white><reason></white>"
+    - "<#d83bff>Par :</#d83bff> <white><actor></white>"
+    - "<#d83bff>Duree :</#d83bff> <white><duration></white>"
+    - "<#d83bff>Expire :</#d83bff> <white><expires></white>"
+    - ""
+    - "<#67b9ff>Si tu veux contester, rejoins:</#67b9ff> <white><discord></white>"
 
 chat:
   slowmode-default: 0
   clear-lines: 120
+  history-limit: 100
+  # Nombre de messages affiches dans /chat clear messages et dans l'outil staff Messages.
+  clear-message-history-limit: 100
+  # Temps minimum entre deux messages d'un joueur.
+  minimum-delay-seconds: 180
+  # Alias accepte aussi: repeat-delay-seconds
+  # Temps minimum avant de pouvoir renvoyer exactement le meme message.
+  same-message-delay-seconds: 30
+  blocked-words:
+    - "fdp"
+    - "tg"
+    - "ntm"
+    - "pute"
 
 staff:
+  # AUTO: utilise LuckPerms si disponible, sinon retombe sur le fichier local.
+  # LUCKPERMS: LuckPerms devient la source principale des roles staff.
+  # INTERNAL: utilise seulement le fichier local.
+  provider: "AUTO"
+  storage-file: "staff-members.yml"
+  runtime-refresh-seconds: 30
+  luckperms:
+    # Si true, /staff add change aussi le groupe principal LuckPerms.
+    sync-primary-group: false
+    assignment-groups:
+      guide: "guide"
+      moderator: "modo"
+      admin: "admin"
+    role-groups:
+      guide:
+        - "guide"
+      moderator:
+        - "modo"
+        - "modo+"
+        - "moderator"
+      admin:
+        - "admin"
+        - "owner"
   freeze-allowed-commands:
     - "/msg"
     - "/tell"
@@ -37,6 +101,64 @@ staff:
     - "/r"
     - "/reply"
     - "/discord"
+  roles:
+    permissions:
+      guide:
+        - "admincore.staffmode"
+        - "admincore.vanish"
+        - "admincore.spy"
+        - "admincore.invsee"
+        - "admincore.stafflist"
+        - "admincore.lookup"
+        - "admincore.history"
+        - "admincore.warn"
+        - "admincore.kick"
+        - "admincore.tempmute"
+        - "admincore.tempban"
+        - "admincore.mute"
+        - "admincore.ban"
+      moderator:
+        - "admincore.staffmode"
+        - "admincore.vanish"
+        - "admincore.freeze"
+        - "admincore.spy"
+        - "admincore.invsee"
+        - "admincore.stafflist"
+        - "admincore.lookup"
+        - "admincore.history"
+        - "admincore.warn"
+        - "admincore.kick"
+        - "admincore.tempmute"
+        - "admincore.tempban"
+        - "admincore.ban"
+        - "admincore.unban"
+        - "admincore.mute"
+        - "admincore.unmute"
+        - "admincore.clearchat"
+      admin:
+        - "admincore.*"
+  approvals:
+    guide:
+      max-direct-tempmute: "1h"
+    moderator:
+      permanent-ban-requires-admin: true
+      max-direct-tempban: "31d"
+  voice-chat:
+    enabled: true
+    auto-allow-roles:
+      - "GUIDE"
+      - "MODERATOR"
+      - "ADMIN"
+    # Ajuste ces nodes suivant ta config Simple Voice Chat.
+    permissions:
+      - "voicechat.listen"
+      - "voicechat.speak"
+      - "voicechat.groups"
+    # Les nodes ci-dessous seront forces a false quand un mute vocal est synchronise.
+    mute-permissions:
+      - "voicechat.speak"
+    sync-tempmute: true
+    sync-mute: true
 
 vpn-check:
   enabled: false

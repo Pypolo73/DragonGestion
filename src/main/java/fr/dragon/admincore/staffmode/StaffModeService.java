@@ -10,6 +10,12 @@ public interface StaffModeService {
 
     boolean isInStaffMode(UUID uuid);
 
+    void clearStaffState(UUID uuid);
+
+    boolean toggleObservationMode(Player player);
+
+    boolean isObservationMode(UUID uuid);
+
     boolean toggleFreeze(Player target);
 
     boolean isFrozen(UUID uuid);

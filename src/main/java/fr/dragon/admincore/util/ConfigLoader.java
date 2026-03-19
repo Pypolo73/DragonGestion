@@ -12,6 +12,7 @@ public final class ConfigLoader {
 
     private final JavaPlugin plugin;
     private FileConfiguration messages;
+    private FileConfiguration inventoryBackup;
 
     public ConfigLoader(final JavaPlugin plugin) {
         this.plugin = plugin;
@@ -21,6 +22,7 @@ public final class ConfigLoader {
         this.plugin.saveDefaultConfig();
         this.plugin.reloadConfig();
         this.messages = loadConfiguration("messages.yml");
+        this.inventoryBackup = loadConfiguration("inventorybackup.yml");
     }
 
     public FileConfiguration config() {
@@ -29,6 +31,10 @@ public final class ConfigLoader {
 
     public FileConfiguration messages() {
         return this.messages;
+    }
+
+    public FileConfiguration inventoryBackup() {
+        return this.inventoryBackup;
     }
 
     private FileConfiguration loadConfiguration(final String fileName) {
