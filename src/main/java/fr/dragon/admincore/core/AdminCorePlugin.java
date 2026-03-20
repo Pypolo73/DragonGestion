@@ -23,6 +23,9 @@ import fr.dragon.admincore.lookup.SessionRepository;
 import fr.dragon.admincore.lookup.SessionTrackingListener;
 import fr.dragon.admincore.reports.ReportCommand;
 import fr.dragon.admincore.reports.ReportService;
+import fr.dragon.admincore.reports.StaffTicketCommand;
+import fr.dragon.admincore.reports.TicketCommand;
+import fr.dragon.admincore.reports.TicketDialogService;
 import fr.dragon.admincore.reports.TicketRepository;
 import fr.dragon.admincore.sanctions.ConnectionSanctionListener;
 import fr.dragon.admincore.sanctions.SanctionApprovalService;
@@ -63,6 +66,7 @@ public final class AdminCorePlugin extends JavaPlugin {
     private InventoryManagerService inventoryManagerService;
     private StaffActionLogger staffActionLogger;
     private ReportService reportService;
+    private TicketDialogService ticketDialogService;
     private AlertManager alertManager;
     private LookupService lookupService;
     private LuckPermsUiService luckPermsUiService;
@@ -98,6 +102,7 @@ public final class AdminCorePlugin extends JavaPlugin {
         this.dialogSupportService = new DialogSupportService(this, this.configLoader, this.messageFormatter, this.chatPromptService);
         this.inventoryManagerService = new InventoryManagerService(this);
         this.reportService = new ReportService(this, ticketRepository);
+        this.ticketDialogService = new TicketDialogService(this);
         this.alertManager = new AlertManager(this, alertRepository, sanctionRepository, playerRepository);
         this.lookupService = new LookupService(this, sessionRepository);
         this.luckPermsUiService = new LuckPermsUiService(this);
@@ -195,6 +200,10 @@ public final class AdminCorePlugin extends JavaPlugin {
         return this.reportService;
     }
 
+    public TicketDialogService getTicketDialogService() {
+        return this.ticketDialogService;
+    }
+
     public AlertManager getAlertManager() {
         return this.alertManager;
     }
@@ -217,6 +226,8 @@ public final class AdminCorePlugin extends JavaPlugin {
         final InventoryCommand inventoryCommand = new InventoryCommand(this);
         final StaffLogsCommand staffLogsCommand = new StaffLogsCommand(this);
         final ReportCommand reportCommand = new ReportCommand(this);
+        final TicketCommand ticketCommand = new TicketCommand(this);
+        final StaffTicketCommand staffTicketCommand = new StaffTicketCommand(this);
         final StaffLuckPermCommand staffLuckPermCommand = new StaffLuckPermCommand(this);
 
         bind("tempban", sanctionCommand);
@@ -257,7 +268,8 @@ public final class AdminCorePlugin extends JavaPlugin {
         bind("inventory", inventoryCommand);
         bind("stafflogs", staffLogsCommand);
         bind("report", reportCommand);
-        bind("tickets", reportCommand);
+        bind("ticket", ticketCommand);
+        bind("staffticket", staffTicketCommand);
         bind("staffluckperm", staffLuckPermCommand);
     }
 

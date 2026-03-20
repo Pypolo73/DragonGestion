@@ -1,11 +1,9 @@
 package fr.dragon.admincore.reports;
 
 import fr.dragon.admincore.core.AdminCorePlugin;
-import fr.dragon.admincore.core.PermissionService;
 import fr.dragon.admincore.dialog.ReportCategoryDialog;
 import fr.dragon.admincore.dialog.ReportDescriptionDialog;
 import fr.dragon.admincore.dialog.ReportDiscordDialog;
-import fr.dragon.admincore.gui.TicketMenu;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -26,11 +24,7 @@ public final class ReportCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(final CommandSender sender, final Command command, final String label, final String[] args) {
-        final String name = command.getName().toLowerCase(Locale.ROOT);
-        if ("report".equals(name)) {
-            return report(sender, args);
-        }
-        return tickets(sender, args);
+        return report(sender, args);
     }
 
     private boolean report(final CommandSender sender, final String[] args) {
@@ -106,57 +100,12 @@ public final class ReportCommand implements CommandExecutor, TabCompleter {
         );
     }
 
-    private boolean tickets(final CommandSender sender, final String[] args) {
-        if (!this.plugin.getPermissionService().check(sender, PermissionService.REPORTS)) {
-            return true;
-        }
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage(this.plugin.getMessageFormatter().deserialize("<prefix><red>Cette commande ouvre un GUI et doit etre lancee en jeu.</red>"));
-            return true;
-        }
-        if (args.length >= 2 && "history".equalsIgnoreCase(args[0])) {
-            final org.bukkit.OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
-            this.plugin.getReportService().history(target.getUniqueId(), args[1], 0).thenAccept(page ->
-                this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
-                    TicketMenu.openHistory(player, args[1], page)
-                )
-            ).exceptionally(throwable -> {
-                this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
-                    player.sendMessage(this.plugin.getMessageFormatter().message("errors.database"))
-                );
-                return null;
-            });
-            return true;
-        }
-        this.plugin.getReportService().openPage(0).thenAccept(page ->
-            this.plugin.getServer().getScheduler().runTask(this.plugin, () -> TicketMenu.openOpen(player, page))
-        ).exceptionally(throwable -> {
-            this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
-                player.sendMessage(this.plugin.getMessageFormatter().message("errors.database"))
-            );
-            return null;
-        });
-        return true;
-    }
-
     @Override
     public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
-        if ("report".equalsIgnoreCase(command.getName())) {
-            if (args.length == 1) {
-                return Bukkit.getOnlinePlayers().stream()
-                    .map(Player::getName)
-                    .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(args[0].toLowerCase(Locale.ROOT)))
-                    .toList();
-            }
-            return List.of();
-        }
         if (args.length == 1) {
-            return List.of("history");
-        }
-        if (args.length == 2 && "history".equalsIgnoreCase(args[0])) {
             return Bukkit.getOnlinePlayers().stream()
                 .map(Player::getName)
-                .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT)))
+                .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(args[0].toLowerCase(Locale.ROOT)))
                 .toList();
         }
         return List.of();
