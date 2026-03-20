@@ -48,6 +48,7 @@ sanctions:
     - "<#d83bff>Ton acces au serveur est suspendu.</#d83bff>"
     - ""
     - "<#d83bff>Joueur :</#d83bff> <white><target></white>"
+    - "<#d83bff>Sanction :</#d83bff> <white><sanction></white>"
     - "<#d83bff>Raison :</#d83bff> <white><reason></white>"
     - "<#d83bff>Par :</#d83bff> <white><actor></white>"
     - "<#d83bff>Duree :</#d83bff> <white><duration></white>"

@@ -35,6 +35,7 @@ sanctions:
     - "<gray>╠════════════════════════════════╣</gray>"
     - "<white>║ Tu as ete banni de ce serveur ║</white>"
     - "<white>║                                ║</white>"
+    - "<white>║ Sanction : <yellow><sanction></yellow></white>"
     - "<white>║ Raison : <yellow><reason></yellow></white>"
     - "<white>║ Par    : <yellow><actor></yellow></white>"
     - "<white>║ Duree  : <yellow><duration></yellow></white>"
