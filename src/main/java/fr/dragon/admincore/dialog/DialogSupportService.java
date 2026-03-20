@@ -314,7 +314,7 @@ public final class DialogSupportService {
         }
         player.showDialog(PresetChoiceDialog.create(
             "Duree de la sanction",
-            "Choisis une duree predefinie ou saisis une duree en mois, semaine, jour ou minute.",
+            "Choisis une duree predefinie ou saisis une duree en mois, jour, heure ou minute.",
             presets,
             preset -> {
                 final Duration duration = TimeParser.parse(preset).orElse(null);

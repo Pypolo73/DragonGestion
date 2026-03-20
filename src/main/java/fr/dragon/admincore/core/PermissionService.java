@@ -34,9 +34,13 @@ public final class PermissionService {
     public static final String NOTES = "admincore.notes";
     public static final String IPBAN = "admincore.ipban";
     public static final String CHECKVPN = "admincore.checkvpn";
+    public static final String ALERTS = "admincore.alerts";
+    public static final String REPORTS = "admincore.reports";
+    public static final String STAFFLUCKPERM = "admincore.staffluckperm";
     public static final String INVENTORY_VIEW = "admincore.inventory.view";
     public static final String INVENTORY_EDIT = "admincore.inventory.edit";
     public static final String INVENTORY_BACKUP = "admincore.inventory.backup";
+    public static final String STAFFLOGS = "admincore.stafflogs";
     public static final String ADMIN = "admincore.admin";
     public static final String CHAT_BYPASS = "admincore.chat.bypass";
     public static final String VANISH_SEE = "admincore.vanish.see";

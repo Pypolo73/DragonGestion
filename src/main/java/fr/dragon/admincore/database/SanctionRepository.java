@@ -8,9 +8,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public final class SanctionRepository {
@@ -105,6 +107,55 @@ public final class SanctionRepository {
                 return statement.executeUpdate();
             } catch (final Exception exception) {
                 throw new IllegalStateException("Desactivation des sanctions IP liees impossible", exception);
+            }
+        });
+    }
+
+    public java.util.concurrent.CompletableFuture<Integer> deactivateByScopeValue(
+        final SanctionType type,
+        final SanctionScope scope,
+        final String scopeValue
+    ) {
+        return this.databaseManager.query(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                UPDATE sanctions
+                SET active = 0
+                WHERE type = ? AND active = 1
+                  AND scope = ?
+                  AND scope_value = ?
+                """)) {
+                statement.setString(1, type.name());
+                statement.setString(2, scope.name());
+                statement.setString(3, scopeValue);
+                return statement.executeUpdate();
+            } catch (final Exception exception) {
+                throw new IllegalStateException("Desactivation par scope impossible", exception);
+            }
+        });
+    }
+
+    public java.util.concurrent.CompletableFuture<Set<UUID>> knownTargetUuids(final UUID targetUuid, final String targetName) {
+        return this.databaseManager.query(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT DISTINCT target_uuid
+                FROM sanctions
+                WHERE target_uuid IS NOT NULL
+                  AND ((target_uuid IS NOT NULL AND target_uuid = ?) OR LOWER(target_name) = LOWER(?))
+                """)) {
+                statement.setString(1, targetUuid == null ? null : targetUuid.toString());
+                statement.setString(2, targetName);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    final Set<UUID> uuids = new LinkedHashSet<>();
+                    while (resultSet.next()) {
+                        final String value = resultSet.getString("target_uuid");
+                        if (value != null && !value.isBlank()) {
+                            uuids.add(UUID.fromString(value));
+                        }
+                    }
+                    return uuids;
+                }
+            } catch (final Exception exception) {
+                throw new IllegalStateException("Lecture des UUID sanctions impossible", exception);
             }
         });
     }
@@ -246,6 +297,28 @@ public final class SanctionRepository {
                 }
             } catch (final Exception exception) {
                 throw new IllegalStateException("Lecture des sanctions actives impossible", exception);
+            }
+        });
+    }
+
+    public java.util.concurrent.CompletableFuture<Integer> countRecentActiveWarnings(final UUID targetUuid, final String targetName, final Instant since) {
+        return this.databaseManager.query(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT COUNT(*)
+                FROM sanctions
+                WHERE type = 'WARN'
+                  AND active = 1
+                  AND created_at >= ?
+                  AND ((target_uuid IS NOT NULL AND target_uuid = ?) OR LOWER(target_name) = LOWER(?))
+                """)) {
+                statement.setLong(1, since.toEpochMilli());
+                statement.setString(2, targetUuid == null ? null : targetUuid.toString());
+                statement.setString(3, targetName);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    return resultSet.next() ? resultSet.getInt(1) : 0;
+                }
+            } catch (final Exception exception) {
+                throw new IllegalStateException("Comptage des warns recents impossible", exception);
             }
         });
     }

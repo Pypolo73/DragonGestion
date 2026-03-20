@@ -9,6 +9,22 @@ softdepend:
   - LuckPerms
 
 commands:
+  report:
+    description: Creer un ticket de report
+    usage: /report <joueur>
+  tickets:
+    description: Voir les tickets staff
+    usage: /tickets [history <joueur>]
+    permission: admincore.reports
+  staffluckperm:
+    description: Interface Dialog LuckPerms
+    usage: /staffluckperm
+    aliases: [stafflp]
+    permission: admincore.staffluckperm
+  stafflogs:
+    description: Voir les actions staff
+    usage: /stafflogs [staff]
+    permission: admincore.stafflogs
   tempban:
     description: Ban temporaire
     usage: /tempban <joueur> [duree] [raison]
@@ -170,9 +186,13 @@ permissions:
       admincore.notes: true
       admincore.ipban: true
       admincore.checkvpn: true
+      admincore.alerts: true
+      admincore.reports: true
+      admincore.staffluckperm: true
       admincore.inventory.view: true
       admincore.inventory.edit: true
       admincore.inventory.backup: true
+      admincore.stafflogs: true
       admincore.admin: true
       admincore.chat.bypass: true
       admincore.freeze.bypass: true
@@ -235,6 +255,12 @@ permissions:
     default: op
   admincore.checkvpn:
     default: op
+  admincore.alerts:
+    default: op
+  admincore.reports:
+    default: op
+  admincore.staffluckperm:
+    default: op
   admincore.inventory.view:
     default: op
   admincore.inventory.edit:
@@ -245,6 +271,8 @@ permissions:
     default: op
     children:
       admincore.inventory.view: true
+  admincore.stafflogs:
+    default: op
   admincore.admin:
     default: op
   admincore.chat.bypass:

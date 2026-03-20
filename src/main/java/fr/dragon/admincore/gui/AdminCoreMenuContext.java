@@ -62,4 +62,11 @@ public final class AdminCoreMenuContext {
             return null;
         }
     }
+
+    public record TicketsHolder(fr.dragon.admincore.reports.TicketRepository.TicketPage page) implements InventoryHolder {
+        @Override
+        public Inventory getInventory() {
+            return null;
+        }
+    }
 }

@@ -46,6 +46,10 @@ public final class AdminCoreMenus {
             lore("Les dernieres sanctions appliquees.", VALUE),
             lore("Acces rapide a l'historique.", INFO)
         )));
+        inventory.setItem(13, item(Material.WRITABLE_BOOK, titleLine("Tickets"), List.of(
+            lore("Reports joueurs ouverts.", VALUE),
+            lore("Assignation et cloture staff.", INFO)
+        )));
         inventory.setItem(16, item(Material.IRON_SWORD, titleLine("Joueurs online"), List.of(
             lore("Teleportation staff en vanish.", VALUE),
             lore("Surveillance rapide des joueurs.", INFO)

@@ -254,4 +254,40 @@ public final class PlayerRepository {
             }
         });
     }
+
+    public java.util.concurrent.CompletableFuture<Integer> countDistinctAccountsOnIp(final String ip) {
+        return this.databaseManager.query(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT COUNT(DISTINCT player_uuid)
+                FROM player_ips
+                WHERE ip = ?
+                """)) {
+                statement.setString(1, ip);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    return resultSet.next() ? resultSet.getInt(1) : 0;
+                }
+            } catch (final Exception exception) {
+                throw new IllegalStateException("Comptage des comptes sur IP impossible", exception);
+            }
+        });
+    }
+
+    public java.util.concurrent.CompletableFuture<Integer> countRecentConnections(final UUID uuid, final Instant since) {
+        return this.databaseManager.query(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT COUNT(*)
+                FROM player_ips
+                WHERE player_uuid = ?
+                  AND seen_at >= ?
+                """)) {
+                statement.setString(1, uuid.toString());
+                statement.setLong(2, since.toEpochMilli());
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    return resultSet.next() ? resultSet.getInt(1) : 0;
+                }
+            } catch (final Exception exception) {
+                throw new IllegalStateException("Comptage des connexions recentes impossible", exception);
+            }
+        });
+    }
 }

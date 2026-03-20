@@ -3,6 +3,7 @@ package fr.dragon.admincore.staffmode;
 import fr.dragon.admincore.core.AdminCorePlugin;
 import fr.dragon.admincore.core.PermissionService;
 import fr.dragon.admincore.core.StaffAssignmentResult;
+import fr.dragon.admincore.core.StaffActionType;
 import fr.dragon.admincore.core.StaffRole;
 import fr.dragon.admincore.dialog.StaffAssignmentDialog;
 import java.util.List;
@@ -88,6 +89,13 @@ public final class StaffCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         final boolean frozen = this.plugin.getStaffModeService().toggleFreeze(target);
+        this.plugin.getStaffActionLogger().log(
+            sender,
+            StaffActionType.FREEZE_TOGGLE,
+            target.getUniqueId(),
+            target.getName(),
+            frozen ? "Freeze active" : "Freeze retire"
+        );
         sender.sendMessage(this.plugin.getMessageFormatter().message(
             frozen ? "staffmode.freeze-enabled" : "staffmode.freeze-disabled",
             this.plugin.getMessageFormatter().text("target", target.getName())
@@ -190,6 +198,13 @@ public final class StaffCommand implements CommandExecutor, TabCompleter {
                     "staff.assign-removed",
                     this.plugin.getMessageFormatter().text("target", target.getName() == null ? args[1] : target.getName())
                 ));
+                this.plugin.getStaffActionLogger().log(
+                    sender,
+                    StaffActionType.LUCKPERMS_EDIT,
+                    target.getUniqueId(),
+                    target.getName() == null ? args[1] : target.getName(),
+                    "Suppression du role staff via /staff remove"
+                );
             })
         );
         return true;
@@ -336,6 +351,13 @@ public final class StaffCommand implements CommandExecutor, TabCompleter {
                     this.plugin.getMessageFormatter().text("target", target.getName() == null ? rawPlayerName : target.getName()),
                     this.plugin.getMessageFormatter().text("role", role.displayName())
                 ));
+                this.plugin.getStaffActionLogger().log(
+                    sender,
+                    StaffActionType.LUCKPERMS_EDIT,
+                    target.getUniqueId(),
+                    target.getName() == null ? rawPlayerName : target.getName(),
+                    "Attribution du role " + role.displayName() + " via /staff add"
+                );
             })
         );
         return true;

@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 
 public final class TimeParser {
 
-    private static final Pattern TOKEN_PATTERN = Pattern.compile("(\\d+)(mo|w|d|h|m|s)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TOKEN_PATTERN = Pattern.compile("(\\d+)(mo|d|h|m)", Pattern.CASE_INSENSITIVE);
 
     private TimeParser() {
     }
@@ -27,12 +27,10 @@ public final class TimeParser {
         while (matcher.find()) {
             matched += matcher.group(0).length();
             final long amount = Long.parseLong(matcher.group(1));
-            millis += switch (matcher.group(2)) {
-                case "s" -> amount * 1_000L;
+            millis += switch (matcher.group(2).toLowerCase(Locale.ROOT)) {
                 case "m" -> amount * 60_000L;
                 case "h" -> amount * 3_600_000L;
                 case "d" -> amount * 86_400_000L;
-                case "w" -> amount * 604_800_000L;
                 case "mo" -> amount * 2_592_000_000L;
                 default -> 0L;
             };
@@ -48,17 +46,15 @@ public final class TimeParser {
     }
 
     public static String format(final Duration duration) {
-        long seconds = Math.max(0L, duration.toSeconds());
-        if (seconds == 0L) {
-            return "0s";
+        final long totalMinutes = Math.max(0L, (duration.toMillis() + 59_999L) / 60_000L);
+        if (totalMinutes == 0L) {
+            return "0m";
         }
         final List<String> parts = new ArrayList<>();
-        seconds = append(parts, seconds, 2_592_000L, "mo");
-        seconds = append(parts, seconds, 604_800L, "w");
-        seconds = append(parts, seconds, 86_400L, "d");
-        seconds = append(parts, seconds, 3_600L, "h");
-        seconds = append(parts, seconds, 60L, "m");
-        append(parts, seconds, 1L, "s");
+        long minutes = append(parts, totalMinutes, 43_200L, "mo");
+        minutes = append(parts, minutes, 1_440L, "d");
+        minutes = append(parts, minutes, 60L, "h");
+        append(parts, minutes, 1L, "m");
         return String.join(" ", parts);
     }
 
@@ -73,11 +69,11 @@ public final class TimeParser {
         return format(remaining);
     }
 
-    private static long append(final List<String> parts, final long sourceSeconds, final long unitSeconds, final String suffix) {
-        final long value = sourceSeconds / unitSeconds;
+    private static long append(final List<String> parts, final long sourceUnits, final long unitSize, final String suffix) {
+        final long value = sourceUnits / unitSize;
         if (value > 0L) {
             parts.add(value + suffix);
         }
-        return sourceSeconds % unitSeconds;
+        return sourceUnits % unitSize;
     }
 }

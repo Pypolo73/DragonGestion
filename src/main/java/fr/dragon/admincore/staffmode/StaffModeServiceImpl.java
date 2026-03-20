@@ -8,7 +8,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.GameMode;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -17,8 +19,10 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.scheduler.BukkitTask;
 
 public final class StaffModeServiceImpl implements StaffModeService {
 
@@ -27,14 +31,17 @@ public final class StaffModeServiceImpl implements StaffModeService {
     private static final TextColor LABEL = TextColor.color(0xD83BFF);
     private static final TextColor INFO = TextColor.color(0x67B9FF);
 
+    private final Plugin plugin;
     private final PlayerSessionManager sessionManager;
     private final VanishService vanishService;
     private final Map<UUID, StaffModeSnapshot> snapshots = new ConcurrentHashMap<>();
     private final Set<UUID> frozenPlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> spyPlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> observationPlayers = ConcurrentHashMap.newKeySet();
+    private final Map<UUID, BukkitTask> monitorTasks = new ConcurrentHashMap<>();
 
-    public StaffModeServiceImpl(final PlayerSessionManager sessionManager, final VanishService vanishService) {
+    public StaffModeServiceImpl(final Plugin plugin, final PlayerSessionManager sessionManager, final VanishService vanishService) {
+        this.plugin = plugin;
         this.sessionManager = sessionManager;
         this.vanishService = vanishService;
     }
@@ -60,6 +67,7 @@ public final class StaffModeServiceImpl implements StaffModeService {
         this.spyPlayers.remove(uuid);
         this.frozenPlayers.remove(uuid);
         this.observationPlayers.remove(uuid);
+        stopMonitor(uuid);
     }
 
     @Override
@@ -124,6 +132,35 @@ public final class StaffModeServiceImpl implements StaffModeService {
         return Set.copyOf(this.spyPlayers);
     }
 
+    @Override
+    public void refreshMonitor(final Player player) {
+        stopMonitor(player.getUniqueId());
+        if (!isInStaffMode(player.getUniqueId())) {
+            return;
+        }
+        if (readTool(player.getInventory().getItemInMainHand()) != StaffTool.MONITOR) {
+            return;
+        }
+        final BukkitTask task = Bukkit.getScheduler().runTaskTimer(this.plugin, () -> {
+            if (!player.isOnline()
+                || !isInStaffMode(player.getUniqueId())
+                || readTool(player.getInventory().getItemInMainHand()) != StaffTool.MONITOR) {
+                stopMonitor(player.getUniqueId());
+                return;
+            }
+            player.sendActionBar(monitorBar());
+        }, 0L, 20L);
+        this.monitorTasks.put(player.getUniqueId(), task);
+    }
+
+    @Override
+    public void stopMonitor(final UUID uuid) {
+        final BukkitTask previous = this.monitorTasks.remove(uuid);
+        if (previous != null) {
+            previous.cancel();
+        }
+    }
+
     private void enable(final Player player) {
         final PlayerInventory inventory = player.getInventory();
         player.closeInventory();
@@ -139,13 +176,14 @@ public final class StaffModeServiceImpl implements StaffModeService {
         ));
         inventory.clear();
         inventory.setArmorContents(null);
-        inventory.setItem(0, namedItem(Material.COMPASS, "Selection staff", StaffTool.MENU, "Ouvre le panneau staff principal."));
+        inventory.setItem(0, namedItem(Material.COMPASS, "Teleportation staff", StaffTool.TELEPORT, "Clic droit: te teleporter sur un joueur.", "Shift + clic droit: attirer un joueur.", "Shift + clic gauche: teleporter au bloc vise."));
         inventory.setItem(1, namedItem(Material.PACKED_ICE, "Freeze", StaffTool.FREEZE, "Clique un joueur pour le freeze ou le liberer."));
         inventory.setItem(2, namedItem(Material.ENDER_EYE, "Vanish", StaffTool.VANISH, "Active ou desactive instantanement le vanish."));
         inventory.setItem(3, namedItem(Material.SPYGLASS, "Spectateur staff", StaffTool.SPECTATOR, "Mode special: hotbar accessible, blocs et vol."));
         inventory.setItem(4, namedItem(Material.PLAYER_HEAD, "Monter sur sa tete", StaffTool.RIDE, "Clique un joueur pour te placer au-dessus de lui."));
         inventory.setItem(5, namedItem(Material.BOOK, "Historique", StaffTool.HISTORY, "Clique un joueur pour voir son historique."));
         inventory.setItem(6, namedItem(Material.PAPER, "Messages", StaffTool.CHAT_LOGS, "Clique un joueur pour voir tous ses messages recents."));
+        inventory.setItem(7, namedItem(Material.COMPARATOR, "Moniteur serveur", StaffTool.MONITOR, "Tiens cet objet en main pour voir TPS, RAM et chunks.", "Le moniteur s'arrete des que tu changes de slot."));
         inventory.setItem(8, namedItem(Material.BARRIER, "Quitter", StaffTool.EXIT, "Quitte le staffmode et restaure ton inventaire."));
         inventory.setHeldItemSlot(0);
         player.setGameMode(GameMode.ADVENTURE);
@@ -161,6 +199,7 @@ public final class StaffModeServiceImpl implements StaffModeService {
         if (snapshot == null) {
             return;
         }
+        stopMonitor(player.getUniqueId());
         this.observationPlayers.remove(player.getUniqueId());
         player.closeInventory();
         final PlayerInventory inventory = player.getInventory();
@@ -189,5 +228,39 @@ public final class StaffModeServiceImpl implements StaffModeService {
         meta.getPersistentDataContainer().set(TOOL_KEY, PersistentDataType.STRING, tool.name());
         item.setItemMeta(meta);
         return item;
+    }
+
+    private StaffTool readTool(final ItemStack item) {
+        if (item == null || item.getItemMeta() == null) {
+            return null;
+        }
+        final String toolName = item.getItemMeta().getPersistentDataContainer().get(TOOL_KEY, PersistentDataType.STRING);
+        if (toolName == null) {
+            return null;
+        }
+        return StaffTool.valueOf(toolName);
+    }
+
+    private Component monitorBar() {
+        final double tps = Bukkit.getTPS()[0];
+        final long usedMemory = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / (1024L * 1024L);
+        final long maxMemory = Runtime.getRuntime().maxMemory() / (1024L * 1024L);
+        final int loadedChunks = Bukkit.getWorlds().stream().mapToInt(world -> world.getLoadedChunks().length).sum();
+        return Component.join(
+            JoinConfiguration.separator(Component.text(" | ", LABEL)),
+            Component.text("TPS ", LABEL).append(Component.text(String.format(java.util.Locale.US, "%.2f", tps), tpsColor(tps))),
+            Component.text("RAM ", LABEL).append(Component.text(usedMemory + "/" + maxMemory + " MB", INFO)),
+            Component.text("Chunks ", LABEL).append(Component.text(Integer.toString(loadedChunks), TITLE))
+        ).decoration(TextDecoration.ITALIC, false);
+    }
+
+    private TextColor tpsColor(final double tps) {
+        if (tps > 18.0D) {
+            return TextColor.color(0x5DFF7D);
+        }
+        if (tps >= 15.0D) {
+            return TextColor.color(0xFFAF45);
+        }
+        return TextColor.color(0xFF6B6B);
     }
 }

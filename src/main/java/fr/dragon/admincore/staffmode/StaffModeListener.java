@@ -2,11 +2,16 @@ package fr.dragon.admincore.staffmode;
 
 import fr.dragon.admincore.core.AdminCorePlugin;
 import fr.dragon.admincore.core.PermissionService;
+import fr.dragon.admincore.core.StaffActionType;
 import fr.dragon.admincore.gui.ActiveSanctionsMenu;
 import fr.dragon.admincore.gui.AdminCoreMenuContext;
 import fr.dragon.admincore.gui.ChatHistoryMenu;
 import fr.dragon.admincore.gui.HistoryMenu;
+import fr.dragon.admincore.gui.TicketMenu;
 import fr.dragon.admincore.inventory.InventoryMenuContext;
+import fr.dragon.admincore.lookup.LookupMenus;
+import org.bukkit.Location;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -18,6 +23,7 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -89,6 +95,10 @@ public final class StaffModeListener implements Listener {
         event.setCancelled(true);
         event.setUseInteractedBlock(org.bukkit.event.Event.Result.DENY);
         event.setUseItemInHand(org.bukkit.event.Event.Result.DENY);
+        if (tool == StaffTool.TELEPORT) {
+            handleTeleportInteract(event);
+            return;
+        }
         handleTool(event.getPlayer(), tool, targetInSight(event.getPlayer()));
     }
 
@@ -102,6 +112,14 @@ public final class StaffModeListener implements Listener {
             return;
         }
         event.setCancelled(true);
+        if (tool == StaffTool.TELEPORT) {
+            if (event.getPlayer().isSneaking()) {
+                pullTarget(event.getPlayer(), target);
+            } else {
+                teleportToTarget(event.getPlayer(), target);
+            }
+            return;
+        }
         handleTool(event.getPlayer(), tool, target);
     }
 
@@ -115,7 +133,25 @@ public final class StaffModeListener implements Listener {
             return;
         }
         event.setCancelled(true);
+        if (tool == StaffTool.TELEPORT) {
+            if (event.getPlayer().isSneaking()) {
+                pullTarget(event.getPlayer(), target);
+            } else {
+                teleportToTarget(event.getPlayer(), target);
+            }
+            return;
+        }
         handleTool(event.getPlayer(), tool, target);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onHeldItemChange(final PlayerItemHeldEvent event) {
+        if (!this.plugin.getStaffModeService().isInStaffMode(event.getPlayer().getUniqueId())) {
+            return;
+        }
+        this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
+            this.plugin.getStaffModeService().refreshMonitor(event.getPlayer())
+        );
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -184,12 +220,13 @@ public final class StaffModeListener implements Listener {
 
     private void handleTool(final Player player, final StaffTool tool, final Player target) {
         if (tool == StaffTool.VANISH) {
-            this.plugin.getVanishService().toggle(player);
-            return;
-        }
-        if (tool == StaffTool.MENU) {
-            this.plugin.getServer().getScheduler().runTaskLater(this.plugin, () ->
-                fr.dragon.admincore.gui.AdminCoreMenus.openMain(player), 1L
+            final boolean vanished = this.plugin.getVanishService().toggle(player);
+            this.plugin.getStaffActionLogger().log(
+                player,
+                StaffActionType.VANISH_TOGGLE,
+                player.getUniqueId(),
+                player.getName(),
+                vanished ? "Vanish active via staffmode" : "Vanish desactive via staffmode"
             );
             return;
         }
@@ -232,14 +269,97 @@ public final class StaffModeListener implements Listener {
             this.plugin.getStaffModeService().toggleStaffMode(player);
             return;
         }
+        if (tool == StaffTool.MONITOR) {
+            this.plugin.getStaffModeService().refreshMonitor(player);
+            return;
+        }
         if (target == null) {
             return;
         }
         if (tool == StaffTool.FREEZE) {
-            this.plugin.getStaffModeService().toggleFreeze(target);
+            final boolean frozen = this.plugin.getStaffModeService().toggleFreeze(target);
+            this.plugin.getStaffActionLogger().log(
+                player,
+                StaffActionType.FREEZE_TOGGLE,
+                target.getUniqueId(),
+                target.getName(),
+                frozen ? "Freeze active via item staff" : "Freeze retire via item staff"
+            );
         } else if (tool == StaffTool.RIDE) {
             target.addPassenger(player);
         }
+    }
+
+    private void handleTeleportInteract(final PlayerInteractEvent event) {
+        if (event.getAction().isLeftClick() && event.getPlayer().isSneaking()) {
+            final Block block = event.getPlayer().getTargetBlockExact(50);
+            if (block == null) {
+                event.getPlayer().sendMessage(this.plugin.getMessageFormatter().message("staffmode.teleport-no-target"));
+                return;
+            }
+            teleportToGround(event.getPlayer(), block.getLocation().add(0.5D, 1.0D, 0.5D));
+            return;
+        }
+        if (event.getAction().isRightClick()) {
+            final Player target = targetInSight(event.getPlayer());
+            if (target == null) {
+                event.getPlayer().sendMessage(this.plugin.getMessageFormatter().message("staffmode.teleport-no-target"));
+                return;
+            }
+            if (event.getPlayer().isSneaking()) {
+                pullTarget(event.getPlayer(), target);
+            } else {
+                teleportToTarget(event.getPlayer(), target);
+            }
+        }
+    }
+
+    private void teleportToTarget(final Player staff, final Player target) {
+        ensureVanished(staff);
+        staff.teleport(target.getLocation());
+        this.plugin.getStaffActionLogger().log(
+            staff,
+            StaffActionType.TP_TO,
+            target.getUniqueId(),
+            target.getName(),
+            formatLocation("Vers joueur", target.getLocation())
+        );
+    }
+
+    private void pullTarget(final Player staff, final Player target) {
+        target.teleport(staff.getLocation());
+        this.plugin.getStaffActionLogger().log(
+            staff,
+            StaffActionType.TP_PULL,
+            target.getUniqueId(),
+            target.getName(),
+            formatLocation("Vers staff", staff.getLocation())
+        );
+    }
+
+    private void teleportToGround(final Player staff, final Location location) {
+        ensureVanished(staff);
+        staff.teleport(location);
+        this.plugin.getStaffActionLogger().log(
+            staff,
+            StaffActionType.TP_GROUND,
+            staff.getUniqueId(),
+            staff.getName(),
+            formatLocation("Bloc vise", location)
+        );
+    }
+
+    private void ensureVanished(final Player player) {
+        if (!this.plugin.getVanishService().isVanished(player.getUniqueId())) {
+            this.plugin.getVanishService().setVanished(player, true);
+        }
+    }
+
+    private String formatLocation(final String prefix, final Location location) {
+        return prefix + " " + location.getWorld().getName() + " "
+            + location.getBlockX() + " "
+            + location.getBlockY() + " "
+            + location.getBlockZ();
     }
 
     private boolean isManagedGui(final InventoryHolder holder) {
@@ -253,6 +373,10 @@ public final class StaffModeListener implements Listener {
             || holder instanceof AdminCoreMenuContext.RecentHolder
             || holder instanceof AdminCoreMenuContext.OnlineHolder
             || holder instanceof ChatHistoryMenu.Holder
+            || holder instanceof TicketMenu.OpenHolder
+            || holder instanceof TicketMenu.HistoryHolder
+            || holder instanceof LookupMenus.OverviewHolder
+            || holder instanceof LookupMenus.SessionsHolder
             || holder instanceof InventoryMenuContext.SelectorHolder
             || holder instanceof InventoryMenuContext.ReadOnlyHolder
             || holder instanceof InventoryMenuContext.EditHolder

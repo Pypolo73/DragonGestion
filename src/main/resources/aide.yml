@@ -1,0 +1,170 @@
+# Fichier d'aide genere avec le plugin.
+# Il n'est pas lu par le code: il sert uniquement de documentation visible
+# dans le dossier AdminCore.
+
+plugin:
+  nom: "AdminCore"
+  version: "Consulter plugin.yml ou le nom du jar"
+  resume: "Plugin staff Paper 1.21.8 pour la moderation, le staffmode, le chat, les sanctions et la gestion d'inventaire."
+
+fichiers:
+  config.yml: "Configuration principale du plugin: sanctions, staff, chat, base de donnees, etc."
+  messages.yml: "Messages MiniMessage affiches en jeu."
+  inventorybackup.yml: "Affichage et comportement du module inventory backup."
+  aide.yml: "Ce fichier d'aide."
+
+modules:
+  sanctions:
+    description: "Module de moderation principal."
+    commandes:
+      - "/ban <joueur> [raison]"
+      - "/tempban <joueur> [duree] [raison]"
+      - "/mute <joueur> [raison]"
+      - "/tempmute <joueur> [duree] [raison]"
+      - "/kick <joueur> [raison]"
+      - "/warn <joueur> [raison]"
+      - "/unban <joueur>"
+      - "/unmute <joueur>"
+      - "/warnings <joueur>"
+      - "/clearwarns <joueur>"
+    fonctionnement:
+      - "Les sanctions peuvent utiliser des raisons et durees predefinies."
+      - "Les tempbans et tempmutes utilisent des durees du style 30m, 1h, 1d, 1mo."
+      - "Les confirmations peuvent afficher l'auteur de la sanction de plusieurs manieres."
+      - "Le ban screen est configurable dans config.yml."
+      - "Selon la config, ban/tempban peuvent aussi lier l'IP."
+      - "Selon la config, mute/tempmute peuvent aussi se synchroniser avec le voice chat."
+
+  staff:
+    description: "Gestion des membres du staff et des validations."
+    commandes:
+      - "/staff add"
+      - "/staff remove"
+      - "/staff list"
+      - "/staff pending"
+      - "/staff approve <id>"
+      - "/staff deny <id>"
+    fonctionnement:
+      - "Le systeme gere des roles internes comme guide, moderator et admin."
+      - "Certaines sanctions de grande ampleur peuvent demander une validation."
+      - "Les permissions staff et validations se reglent dans config.yml."
+
+  staffmode:
+    description: "Mode outils staff separe de l'inventaire normal."
+    commandes:
+      - "/staffmode"
+      - "/freeze <joueur>"
+      - "/spy"
+      - "/stafflist"
+      - "/vanish [joueur]"
+    outils:
+      - "Selection staff"
+      - "Freeze"
+      - "Vanish"
+      - "Mode spectateur staff"
+      - "Historique joueur"
+      - "Messages joueur"
+      - "Monter sur la tete"
+    fonctionnement:
+      - "Le mode staff sauvegarde puis restaure l'inventaire normal du joueur."
+      - "Les items du staffmode servent a moderer rapidement en jeu."
+      - "Le vanish masque le joueur aux personnes sans permission de vision vanish."
+
+  gui_admincore:
+    description: "Interface principale du plugin."
+    commande: "/admincore"
+    contenu:
+      - "Sanctions actives"
+      - "Historique joueur"
+      - "Recherche de profils"
+      - "Sanctions recentes"
+      - "Acces rapide aux validations en attente"
+    fonctionnement:
+      - "Permet d'ouvrir differents menus de moderation."
+      - "La recherche joueur peut proposer des profils et ouvrir des historiques."
+
+  inventory:
+    description: "Visualisation, modification et backups des inventaires."
+    commande: "/inventory <joueur>"
+    modes:
+      - "Voir"
+      - "Modifier"
+      - "Creer un backup"
+    fonctionnement:
+      - "Le premier choix s'ouvre en dialog si le client supporte les dialogs Paper."
+      - "Le mode Voir ouvre un inventaire en lecture seule."
+      - "Le mode Modifier permet de deplacer, retirer et ajouter des items."
+      - "Le bouton Shuffle melange l'inventaire normal."
+      - "Le bouton Clear vide le conteneur apres confirmation."
+      - "Le bouton Backups ouvre maintenant le GUI natif d'AxInventoryRestore."
+      - "La creation de backup manuel passe par AxInventoryRestore."
+    permissions:
+      - "admincore.inventory.view"
+      - "admincore.inventory.edit"
+      - "admincore.inventory.backup"
+
+  chat:
+    description: "Regulation et moderation du chat."
+    commandes:
+      - "/chat clear"
+      - "/chat clear player <joueur>"
+      - "/chat clear messages"
+      - "/slowmode <secondes|off>"
+      - "/chatlock"
+      - "/muteall"
+      - "/broadcast <message>"
+    fonctionnement:
+      - "Peut bloquer les mots interdits."
+      - "Peut imposer un delai entre deux messages."
+      - "Peut bloquer le spam du meme message."
+      - "Peut garder un historique recent des messages."
+      - "Le nombre de messages affiches dans les menus est configurable."
+
+  lookup_et_notes:
+    description: "Outils de suivi joueur."
+    commandes:
+      - "/lookup <joueur|ip>"
+      - "/alts <joueur>"
+      - "/history <joueur>"
+      - "/note <joueur> <texte>"
+      - "/notes <joueur>"
+    fonctionnement:
+      - "Lookup peut afficher l'IP, le client et le nombre de sanctions."
+      - "Les notes staff sont stockees en base."
+      - "L'historique liste les sanctions d'un joueur."
+
+  vpn:
+    description: "Verification VPN simple."
+    commande: "/checkvpn <joueur|ip>"
+    fonctionnement:
+      - "Utilise une URL definie dans config.yml."
+      - "Le module peut etre active ou desactive."
+
+base_de_donnees:
+  types:
+    - "SQLITE"
+    - "MYSQL"
+  fonctionnement:
+    - "Les requetes passent par HikariCP."
+    - "Le schema est cree automatiquement au demarrage."
+    - "Les donnees staff, sanctions, notes et joueurs sont persistantes."
+
+softdepends:
+  AxInventoryRestore: "Utilise pour les backups et leur GUI natif."
+  LuckPerms: "Utilise pour certains affichages et integrations facultatives."
+
+permissions_importantes:
+  - "admincore.*"
+  - "admincore.staffmode"
+  - "admincore.vanish"
+  - "admincore.freeze"
+  - "admincore.lookup"
+  - "admincore.history"
+  - "admincore.inventory.view"
+  - "admincore.inventory.edit"
+  - "admincore.inventory.backup"
+
+notes:
+  - "Les dialogs Paper peuvent etre desactives ou contournes selon la marque du client."
+  - "Le plugin sauvegarde certains fichiers par defaut au premier demarrage."
+  - "Certaines integrations sont optionnelles et dependent d'autres plugins presents sur le serveur."

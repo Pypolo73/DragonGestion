@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -70,10 +71,9 @@ public final class SanctionServiceImpl implements SanctionService {
         }
         return this.sanctionRepository.deactivate(type, targetUuid, targetName).thenCompose(updated -> {
             if (type != SanctionType.BAN || targetUuid == null) {
-                return CompletableFuture.completedFuture(updated);
+                return revokeLinkedIpBans(type, targetUuid, targetName, updated);
             }
-            return this.sanctionRepository.deactivateLinkedIp(type, targetUuid)
-                .thenApply(linkedUpdated -> updated + linkedUpdated);
+            return revokeLinkedIpBans(type, targetUuid, targetName, updated);
         });
     }
 
@@ -280,5 +280,34 @@ public final class SanctionServiceImpl implements SanctionService {
             return this.configLoader.config().getBoolean("sanctions.link-ip-on-ban", true);
         }
         return this.configLoader.config().getBoolean("sanctions.link-ip-on-tempban", true);
+    }
+
+    private CompletableFuture<Integer> revokeLinkedIpBans(
+        final SanctionType type,
+        final UUID targetUuid,
+        final String targetName,
+        final int alreadyUpdated
+    ) {
+        if (type != SanctionType.BAN) {
+            return CompletableFuture.completedFuture(alreadyUpdated);
+        }
+        return this.sanctionRepository.knownTargetUuids(targetUuid, targetName).thenCompose(knownUuids -> {
+            if (!knownUuids.isEmpty()) {
+                CompletableFuture<Integer> future = CompletableFuture.completedFuture(alreadyUpdated);
+                for (final UUID knownUuid : new ArrayList<>(knownUuids)) {
+                    future = future.thenCompose(total ->
+                        this.sanctionRepository.deactivateLinkedIp(type, knownUuid).thenApply(linkedUpdated -> total + linkedUpdated)
+                    );
+                }
+                return future;
+            }
+            return this.playerRepository.findLatestIp(targetName).thenCompose(optionalIp -> {
+                if (optionalIp.isEmpty() || optionalIp.get().isBlank()) {
+                    return CompletableFuture.completedFuture(alreadyUpdated);
+                }
+                return this.sanctionRepository.deactivateByScopeValue(type, SanctionScope.IP, optionalIp.get())
+                    .thenApply(linkedUpdated -> alreadyUpdated + linkedUpdated);
+            });
+        });
     }
 }

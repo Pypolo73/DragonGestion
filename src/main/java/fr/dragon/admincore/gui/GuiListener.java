@@ -4,6 +4,11 @@ import fr.dragon.admincore.core.AdminCorePlugin;
 import fr.dragon.admincore.database.PlayerProfile;
 import fr.dragon.admincore.chat.ChatHistoryEntry;
 import fr.dragon.admincore.dialog.PlayerSearchDialog;
+import fr.dragon.admincore.dialog.TicketCloseDialog;
+import fr.dragon.admincore.dialog.TicketConversationDialog;
+import fr.dragon.admincore.lookup.LookupMenus;
+import fr.dragon.admincore.lookup.SessionSummary;
+import fr.dragon.admincore.reports.TicketRecord;
 import fr.dragon.admincore.sanctions.SanctionRecord;
 import java.util.Comparator;
 import java.util.ArrayList;
@@ -73,9 +78,39 @@ public final class GuiListener implements Listener {
             handleSanctionClick(player, recentHolder.sanctions(), event.getSlot());
             return;
         }
+        if (holder instanceof TicketMenu.OpenHolder openHolder) {
+            event.setCancelled(true);
+            handleOpenTicketsClick(player, openHolder, event.getSlot(), event.getClick());
+            return;
+        }
+        if (holder instanceof TicketMenu.StatusHolder statusHolder) {
+            event.setCancelled(true);
+            handleTicketStatusClick(player, statusHolder, event.getSlot(), event.getClick());
+            return;
+        }
+        if (holder instanceof TicketMenu.HistoryHolder historyHolder) {
+            event.setCancelled(true);
+            handleTicketHistoryClick(player, historyHolder, event.getSlot());
+            return;
+        }
+        if (holder instanceof LookupMenus.OverviewHolder overviewHolder) {
+            event.setCancelled(true);
+            handleLookupOverviewClick(player, overviewHolder, event.getSlot());
+            return;
+        }
+        if (holder instanceof LookupMenus.SessionsHolder sessionsHolder) {
+            event.setCancelled(true);
+            handleLookupSessionsClick(player, sessionsHolder, event.getSlot());
+            return;
+        }
         if (holder instanceof AdminCoreMenuContext.OnlineHolder onlineHolder) {
             event.setCancelled(true);
             handleOnlineClick(player, onlineHolder.players(), event.getSlot());
+            return;
+        }
+        if (holder instanceof StaffLogsMenu.Holder staffLogsHolder) {
+            event.setCancelled(true);
+            handleStaffLogsClick(player, staffLogsHolder, event.getSlot());
         }
     }
 
@@ -93,6 +128,12 @@ public final class GuiListener implements Listener {
         if (slot == 14) {
             this.plugin.getSanctionService().recentActiveSanctions(54).thenAccept(records ->
                 nextTick(() -> AdminCoreMenus.openRecent(player, records))
+            );
+            return;
+        }
+        if (slot == 13) {
+            this.plugin.getReportService().openPage(0).thenAccept(page ->
+                nextTick(() -> TicketMenu.openOpen(player, page))
             );
             return;
         }
@@ -148,9 +189,7 @@ public final class GuiListener implements Listener {
             return;
         }
         final String targetName = holder.results().get(slot).name();
-        this.plugin.getSanctionService().history(Bukkit.getOfflinePlayer(targetName).getUniqueId(), targetName, 54).thenAccept(history ->
-            nextTick(() -> HistoryMenu.open(player, targetName, history))
-        );
+        openLookupOverview(player, Bukkit.getOfflinePlayer(targetName).getUniqueId(), targetName);
     }
 
     private void handleProfileListClick(final Player player, final AdminCoreMenuContext.ProfileListHolder holder, final int slot) {
@@ -176,9 +215,7 @@ public final class GuiListener implements Listener {
             return;
         }
         final String targetName = holder.names().get(slot);
-        this.plugin.getSanctionService().history(Bukkit.getOfflinePlayer(targetName).getUniqueId(), targetName, 54).thenAccept(history ->
-            nextTick(() -> HistoryMenu.open(player, targetName, history))
-        );
+        openLookupOverview(player, Bukkit.getOfflinePlayer(targetName).getUniqueId(), targetName);
     }
 
     private void handleSanctionClick(final Player player, final List<SanctionRecord> sanctions, final int slot) {
@@ -269,6 +306,287 @@ public final class GuiListener implements Listener {
                 this.plugin.getChatService().recentMessagesByAuthor(authorFilter, limit)
             );
         });
+    }
+
+    private void handleStaffLogsClick(final Player player, final StaffLogsMenu.Holder holder, final int slot) {
+        if (slot == 45 && holder.page().page() > 0) {
+            StaffLogsMenu.changePage(this.plugin, player, holder, -1);
+            return;
+        }
+        if (slot == 49) {
+            player.closeInventory();
+            return;
+        }
+        if (slot == 53 && holder.page().hasNext()) {
+            StaffLogsMenu.changePage(this.plugin, player, holder, 1);
+        }
+    }
+
+    private void handleOpenTicketsClick(final Player player, final TicketMenu.OpenHolder holder, final int slot, final ClickType click) {
+        if (slot == 36) {
+            return;
+        }
+        if (slot == 40) {
+            this.plugin.getReportService().closedPage(0).thenAccept(page ->
+                nextTick(() -> TicketMenu.openClosed(player, page))
+            );
+            return;
+        }
+        if (slot == 44) {
+            this.plugin.getReportService().archivedPage(0).thenAccept(page ->
+                nextTick(() -> TicketMenu.openArchives(player, page))
+            );
+            return;
+        }
+        if (slot == 45 && holder.page().page() > 0) {
+            this.plugin.getReportService().openPage(holder.page().page() - 1).thenAccept(page ->
+                nextTick(() -> TicketMenu.openOpen(player, page))
+            );
+            return;
+        }
+        if (slot == 49) {
+            player.closeInventory();
+            return;
+        }
+        if (slot == 53 && holder.page().hasNext()) {
+            this.plugin.getReportService().openPage(holder.page().page() + 1).thenAccept(page ->
+                nextTick(() -> TicketMenu.openOpen(player, page))
+            );
+            return;
+        }
+        if (slot < 0 || slot >= 28 || slot >= holder.page().entries().size()) {
+            return;
+        }
+        final TicketRecord ticket = holder.page().entries().get(slot);
+        if (click.isLeftClick()) {
+            if (ticket.status() == fr.dragon.admincore.reports.TicketStatus.OPEN) {
+                this.plugin.getReportService().assign(player, ticket.id()).thenAccept(updated ->
+                    sync(() -> {
+                        player.sendMessage(this.plugin.getMessageFormatter().message(
+                            "reports.assigned",
+                            this.plugin.getMessageFormatter().text("id", Long.toString(updated.id()))
+                        ));
+                        openTicketConversation(player, updated);
+                    })
+                ).exceptionally(throwable -> {
+                    sync(() -> player.sendMessage(this.plugin.getMessageFormatter().message("errors.database")));
+                    return null;
+                });
+                return;
+            }
+            openTicketConversation(player, ticket);
+            return;
+        }
+        if (click.isRightClick()) {
+            openTicketCloseFlow(player, ticket, holder.page().page());
+        }
+    }
+
+    private void handleTicketStatusClick(final Player player, final TicketMenu.StatusHolder holder, final int slot, final ClickType click) {
+        if (slot == 36) {
+            this.plugin.getReportService().openPage(0).thenAccept(page ->
+                nextTick(() -> TicketMenu.openOpen(player, page))
+            );
+            return;
+        }
+        if (slot == 40) {
+            if (holder.view() != TicketMenu.TicketView.CLOSED) {
+                this.plugin.getReportService().closedPage(0).thenAccept(page ->
+                    nextTick(() -> TicketMenu.openClosed(player, page))
+                );
+            }
+            return;
+        }
+        if (slot == 44) {
+            if (holder.view() != TicketMenu.TicketView.ARCHIVED) {
+                this.plugin.getReportService().archivedPage(0).thenAccept(page ->
+                    nextTick(() -> TicketMenu.openArchives(player, page))
+                );
+            }
+            return;
+        }
+        if (slot == 45 && holder.page().page() > 0) {
+            openTicketStatusPage(player, holder.view(), holder.page().page() - 1);
+            return;
+        }
+        if (slot == 49) {
+            player.closeInventory();
+            return;
+        }
+        if (slot == 53 && holder.page().hasNext()) {
+            openTicketStatusPage(player, holder.view(), holder.page().page() + 1);
+            return;
+        }
+        if (slot < 0 || slot >= 28 || slot >= holder.page().entries().size()) {
+            return;
+        }
+        if (holder.view() != TicketMenu.TicketView.CLOSED || !click.isShiftClick() || !click.isRightClick()) {
+            return;
+        }
+        final TicketRecord ticket = holder.page().entries().get(slot);
+        this.plugin.getReportService().archive(player, ticket.id()).thenAccept(updated ->
+            sync(() -> {
+                player.sendMessage(this.plugin.getMessageFormatter().message(
+                    "reports.archived",
+                    this.plugin.getMessageFormatter().text("id", Long.toString(updated.id()))
+                ));
+                openTicketStatusPage(player, TicketMenu.TicketView.CLOSED, holder.page().page());
+            })
+        ).exceptionally(throwable -> {
+            sync(() -> player.sendMessage(this.plugin.getMessageFormatter().message("errors.database")));
+            return null;
+        });
+    }
+
+    private void handleTicketHistoryClick(final Player player, final TicketMenu.HistoryHolder holder, final int slot) {
+        if (slot == 45 && holder.page().page() > 0) {
+            final String targetName = holder.targetName();
+            this.plugin.getReportService().history(Bukkit.getOfflinePlayer(targetName).getUniqueId(), targetName, holder.page().page() - 1).thenAccept(page ->
+                nextTick(() -> TicketMenu.openHistory(player, targetName, page))
+            );
+            return;
+        }
+        if (slot == 49) {
+            player.closeInventory();
+            return;
+        }
+        if (slot == 53 && holder.page().hasNext()) {
+            final String targetName = holder.targetName();
+            this.plugin.getReportService().history(Bukkit.getOfflinePlayer(targetName).getUniqueId(), targetName, holder.page().page() + 1).thenAccept(page ->
+                nextTick(() -> TicketMenu.openHistory(player, targetName, page))
+            );
+        }
+    }
+
+    private void openTicketStatusPage(final Player player, final TicketMenu.TicketView view, final int page) {
+        if (view == TicketMenu.TicketView.CLOSED) {
+            this.plugin.getReportService().closedPage(page).thenAccept(result ->
+                nextTick(() -> TicketMenu.openClosed(player, result))
+            );
+            return;
+        }
+        this.plugin.getReportService().archivedPage(page).thenAccept(result ->
+            nextTick(() -> TicketMenu.openArchives(player, result))
+        );
+    }
+
+    private void openTicketCloseFlow(final Player player, final TicketRecord ticket, final int returnPage) {
+        if (this.plugin.getDialogSupportService().supportsDialogs(player)) {
+            player.showDialog(TicketCloseDialog.create(ticket.targetName(), (response, audience) -> {
+                final String note = response.getText("note");
+                closeTicket(player, ticket, note, returnPage);
+            }, (response, audience) -> nextTick(() ->
+                this.plugin.getReportService().openPage(returnPage).thenAccept(page -> nextTick(() -> TicketMenu.openOpen(player, page)))
+            )));
+            return;
+        }
+        this.plugin.getChatPromptService().start(player, new fr.dragon.admincore.dialog.ChatPromptService.Session() {
+            @Override
+            public void open(final Player actor) {
+                actor.sendMessage(plugin.getMessageFormatter().message("reports.close-prompt"));
+            }
+
+            @Override
+            public boolean handle(final Player actor, final String input) {
+                closeTicket(actor, ticket, input, returnPage);
+                return false;
+            }
+        });
+    }
+
+    private void closeTicket(final Player player, final TicketRecord ticket, final String note, final int returnPage) {
+        this.plugin.getReportService().close(player, ticket.id(), note).thenAccept(updated ->
+            sync(() -> {
+                player.sendMessage(this.plugin.getMessageFormatter().message(
+                    "reports.closed",
+                    this.plugin.getMessageFormatter().text("id", Long.toString(updated.id()))
+                ));
+                this.plugin.getReportService().openPage(returnPage).thenAccept(page ->
+                    nextTick(() -> TicketMenu.openOpen(player, page))
+                );
+            })
+        ).exceptionally(throwable -> {
+            sync(() -> player.sendMessage(this.plugin.getMessageFormatter().message("errors.database")));
+            return null;
+        });
+    }
+
+    private void openTicketConversation(final Player player, final TicketRecord ticket) {
+        this.plugin.getReportService().messages(ticket.id(), 8).thenAccept(messages ->
+            nextTick(() -> player.showDialog(TicketConversationDialog.create(
+                ticket,
+                messages,
+                (response, audience) -> {
+                    final String message = response.getText("message");
+                    this.plugin.getReportService().sendMessage(player, ticket, message).thenRun(() ->
+                        nextTick(() -> openTicketConversation(player, ticket))
+                    ).exceptionally(throwable -> {
+                        sync(() -> {
+                            player.sendMessage(ticketMessageError(throwable));
+                            openTicketConversation(player, ticket);
+                        });
+                        return null;
+                    });
+                },
+                (response, audience) -> {
+                }
+            )))
+        ).exceptionally(throwable -> {
+            sync(() -> player.sendMessage(this.plugin.getMessageFormatter().message("errors.database")));
+            return null;
+        });
+    }
+
+    private net.kyori.adventure.text.Component ticketMessageError(final Throwable throwable) {
+        if (throwable instanceof java.util.concurrent.CompletionException completion && completion.getCause() != null) {
+            return ticketMessageError(completion.getCause());
+        }
+        if (throwable instanceof IllegalArgumentException) {
+            return this.plugin.getMessageFormatter().message("reports.message-empty");
+        }
+        return this.plugin.getMessageFormatter().message("errors.database");
+    }
+
+    private void handleLookupOverviewClick(final Player player, final LookupMenus.OverviewHolder holder, final int slot) {
+        if (slot == 13) {
+            this.plugin.getSanctionService().history(holder.targetUuid(), holder.targetName(), 54).thenAccept(history ->
+                nextTick(() -> HistoryMenu.open(player, holder.targetName(), history))
+            );
+            return;
+        }
+        if (slot == 15) {
+            this.plugin.getLookupService().page(holder.targetUuid(), holder.targetName(), 0).thenAccept(page ->
+                nextTick(() -> LookupMenus.openSessions(player, holder.targetUuid(), holder.targetName(), page))
+            );
+        }
+    }
+
+    private void handleLookupSessionsClick(final Player player, final LookupMenus.SessionsHolder holder, final int slot) {
+        if (slot == 45 && holder.page() > 0) {
+            this.plugin.getLookupService().page(holder.targetUuid(), holder.targetName(), holder.page() - 1).thenAccept(page ->
+                nextTick(() -> LookupMenus.openSessions(player, holder.targetUuid(), holder.targetName(), page))
+            );
+            return;
+        }
+        if (slot == 49) {
+            openLookupOverview(player, holder.targetUuid(), holder.targetName());
+            return;
+        }
+        if (slot == 53 && holder.hasNext()) {
+            this.plugin.getLookupService().page(holder.targetUuid(), holder.targetName(), holder.page() + 1).thenAccept(page ->
+                nextTick(() -> LookupMenus.openSessions(player, holder.targetUuid(), holder.targetName(), page))
+            );
+        }
+    }
+
+    private void openLookupOverview(final Player player, final java.util.UUID targetUuid, final String targetName) {
+        final java.util.concurrent.CompletableFuture<PlayerProfile> profileFuture =
+            this.plugin.getSanctionService().playerProfile(targetUuid, targetName);
+        final java.util.concurrent.CompletableFuture<SessionSummary> summaryFuture =
+            this.plugin.getLookupService().summary(targetUuid, targetName);
+        profileFuture.thenCombine(summaryFuture, java.util.AbstractMap.SimpleEntry::new).thenAccept(entry ->
+            nextTick(() -> LookupMenus.openOverview(player, targetUuid, targetName, entry.getKey(), entry.getValue()))
+        );
     }
 
     private void sync(final Runnable runnable) {

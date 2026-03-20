@@ -2,6 +2,7 @@ package fr.dragon.admincore.vanish;
 
 import fr.dragon.admincore.core.AdminCorePlugin;
 import fr.dragon.admincore.core.PermissionService;
+import fr.dragon.admincore.core.StaffActionType;
 import java.util.List;
 import java.util.Locale;
 import org.bukkit.Bukkit;
@@ -30,6 +31,13 @@ public final class VanishCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             final boolean vanished = this.plugin.getVanishService().toggle(player);
+            this.plugin.getStaffActionLogger().log(
+                player,
+                StaffActionType.VANISH_TOGGLE,
+                player.getUniqueId(),
+                player.getName(),
+                vanished ? "Vanish active via /vanish" : "Vanish desactive via /vanish"
+            );
             sender.sendMessage(this.plugin.getMessageFormatter().message(vanished ? "vanish.enabled" : "vanish.disabled"));
             return true;
         }
@@ -39,6 +47,13 @@ public final class VanishCommand implements CommandExecutor, TabCompleter {
             return true;
         }
         final boolean vanished = this.plugin.getVanishService().toggle(target);
+        this.plugin.getStaffActionLogger().log(
+            sender,
+            StaffActionType.VANISH_TOGGLE,
+            target.getUniqueId(),
+            target.getName(),
+            vanished ? "Vanish active sur cible via /vanish" : "Vanish desactive sur cible via /vanish"
+        );
         sender.sendMessage(this.plugin.getMessageFormatter().message(
             vanished ? "vanish.enabled-target" : "vanish.disabled-target",
             this.plugin.getMessageFormatter().text("target", target.getName())

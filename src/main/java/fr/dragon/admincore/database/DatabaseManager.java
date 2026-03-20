@@ -169,10 +169,80 @@ public final class DatabaseManager {
                     created_at BIGINT NOT NULL
                 )
                 """);
+            statement.addBatch("""
+                CREATE TABLE IF NOT EXISTS staff_actions (
+                    uuid_staff VARCHAR(36),
+                    name_staff VARCHAR(32) NOT NULL,
+                    action_type VARCHAR(32) NOT NULL,
+                    target_uuid VARCHAR(36),
+                    target_name VARCHAR(32),
+                    details VARCHAR(255) NOT NULL,
+                    timestamp BIGINT NOT NULL
+                )
+                """);
+            statement.addBatch("""
+                CREATE TABLE IF NOT EXISTS tickets (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    uuid_reporter VARCHAR(36) NOT NULL,
+                    uuid_cible VARCHAR(36) NOT NULL,
+                    name_reporter VARCHAR(32) NOT NULL,
+                    name_cible VARCHAR(32) NOT NULL,
+                    raison VARCHAR(255) NOT NULL,
+                    discord_reporter VARCHAR(64),
+                    categorie VARCHAR(64),
+                    description VARCHAR(255),
+                    statut VARCHAR(16) NOT NULL,
+                    uuid_staff_assigned VARCHAR(36),
+                    name_staff_assigned VARCHAR(32),
+                    note_cloture VARCHAR(255),
+                    timestamp BIGINT NOT NULL
+                )
+                """);
+            statement.addBatch("""
+                CREATE TABLE IF NOT EXISTS alerts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    type VARCHAR(32) NOT NULL,
+                    uuid_cible VARCHAR(36) NOT NULL,
+                    timestamp BIGINT NOT NULL,
+                    details VARCHAR(255) NOT NULL
+                )
+                """);
+            statement.addBatch("""
+                CREATE TABLE IF NOT EXISTS sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    uuid VARCHAR(36) NOT NULL,
+                    ip VARCHAR(64),
+                    name VARCHAR(32) NOT NULL,
+                    server VARCHAR(64) NOT NULL,
+                    timestamp_join BIGINT NOT NULL,
+                    timestamp_quit BIGINT
+                )
+                """);
+            statement.addBatch("""
+                CREATE TABLE IF NOT EXISTS ticket_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ticket_id BIGINT NOT NULL,
+                    uuid_auteur VARCHAR(36),
+                    name_auteur VARCHAR(32) NOT NULL,
+                    contenu VARCHAR(255) NOT NULL,
+                    timestamp BIGINT NOT NULL,
+                    is_staff INTEGER NOT NULL DEFAULT 0
+                )
+                """);
             statement.executeBatch();
             alterIgnore(statement, "ALTER TABLE players ADD COLUMN last_client_brand VARCHAR(64)");
             alterIgnore(statement, "ALTER TABLE players ADD COLUMN last_level INTEGER NOT NULL DEFAULT 0");
             alterIgnore(statement, "ALTER TABLE sanctions ADD COLUMN linked_target_uuid VARCHAR(36)");
+            alterIgnore(statement, "ALTER TABLE tickets ADD COLUMN discord_reporter VARCHAR(64)");
+            alterIgnore(statement, "ALTER TABLE tickets ADD COLUMN categorie VARCHAR(64)");
+            alterIgnore(statement, "ALTER TABLE tickets ADD COLUMN description VARCHAR(255)");
+            alterIgnore(statement, "CREATE INDEX IF NOT EXISTS idx_staff_actions_timestamp ON staff_actions (timestamp DESC)");
+            alterIgnore(statement, "CREATE INDEX IF NOT EXISTS idx_staff_actions_staff_name ON staff_actions (name_staff)");
+            alterIgnore(statement, "CREATE INDEX IF NOT EXISTS idx_tickets_status_timestamp ON tickets (statut, timestamp DESC)");
+            alterIgnore(statement, "CREATE INDEX IF NOT EXISTS idx_tickets_target_name ON tickets (name_cible)");
+            alterIgnore(statement, "CREATE INDEX IF NOT EXISTS idx_ticket_messages_ticket_time ON ticket_messages (ticket_id, timestamp DESC)");
+            alterIgnore(statement, "CREATE INDEX IF NOT EXISTS idx_alerts_target_type_time ON alerts (uuid_cible, type, timestamp DESC)");
+            alterIgnore(statement, "CREATE INDEX IF NOT EXISTS idx_sessions_target_join ON sessions (uuid, timestamp_join DESC)");
         } catch (final SQLException exception) {
             this.plugin.getLogger().log(Level.SEVERE, "Impossible d'initialiser le schema SQL", exception);
             throw new IllegalStateException("Base AdminCore indisponible", exception);

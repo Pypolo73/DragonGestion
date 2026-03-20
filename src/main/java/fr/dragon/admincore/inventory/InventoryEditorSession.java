@@ -9,6 +9,7 @@ final class InventoryEditorSession {
     private final String targetName;
     private final InventoryTarget targetType;
     private final InventoryDataHandle dataHandle;
+    private boolean dirty;
 
     InventoryEditorSession(
         final UUID viewerUuid,
@@ -42,5 +43,13 @@ final class InventoryEditorSession {
 
     InventoryDataHandle dataHandle() {
         return this.dataHandle;
+    }
+
+    boolean dirty() {
+        return this.dirty;
+    }
+
+    void markDirty() {
+        this.dirty = true;
     }
 }

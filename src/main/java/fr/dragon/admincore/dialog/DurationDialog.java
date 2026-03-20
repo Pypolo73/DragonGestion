@@ -23,7 +23,7 @@ public final class DurationDialog {
     ) {
         return DialogHelper.create(
             Component.text(title),
-            List.of(DialogBody.plainMessage(Component.text("Saisis une duree libre. Exemples: 30m, 1h, 3d, 1w, 1mo."), 280)),
+            List.of(DialogBody.plainMessage(Component.text("Saisis une duree libre. Exemples: 30m, 1h, 3d, 1mo."), 280)),
             List.of(
                 DialogInput.text("duration", Component.text("Duree"))
                     .width(240)

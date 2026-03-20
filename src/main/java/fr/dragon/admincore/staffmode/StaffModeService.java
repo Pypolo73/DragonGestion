@@ -27,4 +27,8 @@ public interface StaffModeService {
     Set<UUID> getFrozenPlayers();
 
     Set<UUID> getSpyPlayers();
+
+    void refreshMonitor(Player player);
+
+    void stopMonitor(UUID uuid);
 }

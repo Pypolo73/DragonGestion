@@ -1,5 +1,7 @@
 package fr.dragon.admincore.core;
 
+import fr.dragon.admincore.alerts.AlertManager;
+import fr.dragon.admincore.alerts.AlertRepository;
 import fr.dragon.admincore.chat.ChatService;
 import fr.dragon.admincore.chat.ChatServiceImpl;
 import fr.dragon.admincore.chat.ChatCommand;
@@ -14,6 +16,14 @@ import fr.dragon.admincore.gui.GuiListener;
 import fr.dragon.admincore.inventory.InventoryCommand;
 import fr.dragon.admincore.inventory.InventoryListener;
 import fr.dragon.admincore.inventory.InventoryManagerService;
+import fr.dragon.admincore.luckperms.LuckPermsUiService;
+import fr.dragon.admincore.luckperms.StaffLuckPermCommand;
+import fr.dragon.admincore.lookup.LookupService;
+import fr.dragon.admincore.lookup.SessionRepository;
+import fr.dragon.admincore.lookup.SessionTrackingListener;
+import fr.dragon.admincore.reports.ReportCommand;
+import fr.dragon.admincore.reports.ReportService;
+import fr.dragon.admincore.reports.TicketRepository;
 import fr.dragon.admincore.sanctions.ConnectionSanctionListener;
 import fr.dragon.admincore.sanctions.SanctionApprovalService;
 import fr.dragon.admincore.sanctions.SanctionCommand;
@@ -51,11 +61,17 @@ public final class AdminCorePlugin extends JavaPlugin {
     private ChatPromptService chatPromptService;
     private DialogSupportService dialogSupportService;
     private InventoryManagerService inventoryManagerService;
+    private StaffActionLogger staffActionLogger;
+    private ReportService reportService;
+    private AlertManager alertManager;
+    private LookupService lookupService;
+    private LuckPermsUiService luckPermsUiService;
     private BukkitTask runtimeRefreshTask;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        saveResource("aide.yml", false);
         this.configLoader = new ConfigLoader(this);
         this.configLoader.reload();
         this.messageFormatter = new MessageFormatter(this.configLoader);
@@ -65,18 +81,26 @@ public final class AdminCorePlugin extends JavaPlugin {
 
         this.databaseManager = new DatabaseManager(this, this.configLoader);
         this.databaseManager.start();
+        this.staffActionLogger = StaffActionLogger.create(this.databaseManager);
 
         final SanctionRepository sanctionRepository = new SanctionRepository(this.databaseManager);
         final PlayerRepository playerRepository = new PlayerRepository(this.databaseManager);
         final NoteRepository noteRepository = new NoteRepository(this.databaseManager);
+        final TicketRepository ticketRepository = new TicketRepository(this.databaseManager);
+        final AlertRepository alertRepository = new AlertRepository(this.databaseManager);
+        final SessionRepository sessionRepository = new SessionRepository(this.databaseManager);
         this.sanctionService = new SanctionServiceImpl(this.databaseManager, sanctionRepository, playerRepository, noteRepository, this.configLoader);
         this.sanctionApprovalService = new SanctionApprovalService(this);
         this.chatService = new ChatServiceImpl(this.configLoader, this.messageFormatter);
         this.vanishService = new VanishServiceImpl(this);
-        this.staffModeService = new StaffModeServiceImpl(this.playerSessionManager, this.vanishService);
+        this.staffModeService = new StaffModeServiceImpl(this, this.playerSessionManager, this.vanishService);
         this.chatPromptService = new ChatPromptService(this, this.messageFormatter);
         this.dialogSupportService = new DialogSupportService(this, this.configLoader, this.messageFormatter, this.chatPromptService);
         this.inventoryManagerService = new InventoryManagerService(this);
+        this.reportService = new ReportService(this, ticketRepository);
+        this.alertManager = new AlertManager(this, alertRepository, sanctionRepository, playerRepository);
+        this.lookupService = new LookupService(this, sessionRepository);
+        this.luckPermsUiService = new LuckPermsUiService(this);
 
         AdminCoreAPI.bind(this, this.sanctionService, this.vanishService, this.staffModeService, this.chatService, this.playerSessionManager);
 
@@ -92,6 +116,7 @@ public final class AdminCorePlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         AdminCoreAPI.clear();
+        StaffActionLogger.clear();
         if (this.runtimeRefreshTask != null) {
             this.runtimeRefreshTask.cancel();
             this.runtimeRefreshTask = null;
@@ -162,6 +187,26 @@ public final class AdminCorePlugin extends JavaPlugin {
         return this.inventoryManagerService;
     }
 
+    public StaffActionLogger getStaffActionLogger() {
+        return this.staffActionLogger;
+    }
+
+    public ReportService getReportService() {
+        return this.reportService;
+    }
+
+    public AlertManager getAlertManager() {
+        return this.alertManager;
+    }
+
+    public LookupService getLookupService() {
+        return this.lookupService;
+    }
+
+    public LuckPermsUiService getLuckPermsUiService() {
+        return this.luckPermsUiService;
+    }
+
     private void registerCommands() {
         final SanctionCommand sanctionCommand = new SanctionCommand(this);
         final SanctionsAdminCommand sanctionsAdminCommand = new SanctionsAdminCommand(this);
@@ -170,6 +215,9 @@ public final class AdminCorePlugin extends JavaPlugin {
         final VanishCommand vanishCommand = new VanishCommand(this);
         final AdminCoreCommand adminCoreCommand = new AdminCoreCommand(this);
         final InventoryCommand inventoryCommand = new InventoryCommand(this);
+        final StaffLogsCommand staffLogsCommand = new StaffLogsCommand(this);
+        final ReportCommand reportCommand = new ReportCommand(this);
+        final StaffLuckPermCommand staffLuckPermCommand = new StaffLuckPermCommand(this);
 
         bind("tempban", sanctionCommand);
         bind("tempmute", sanctionCommand);
@@ -207,6 +255,10 @@ public final class AdminCorePlugin extends JavaPlugin {
         bind("vanish", vanishCommand);
         bind("admincore", adminCoreCommand);
         bind("inventory", inventoryCommand);
+        bind("stafflogs", staffLogsCommand);
+        bind("report", reportCommand);
+        bind("tickets", reportCommand);
+        bind("staffluckperm", staffLuckPermCommand);
     }
 
     private void registerListeners() {
@@ -215,6 +267,8 @@ public final class AdminCorePlugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new StaffModeListener(this), this);
         Bukkit.getPluginManager().registerEvents(new GuiListener(this), this);
         Bukkit.getPluginManager().registerEvents(new InventoryListener(this), this);
+        Bukkit.getPluginManager().registerEvents(this.alertManager, this);
+        Bukkit.getPluginManager().registerEvents(new SessionTrackingListener(this), this);
     }
 
     private void bind(final String name, final CommandExecutor executor) {

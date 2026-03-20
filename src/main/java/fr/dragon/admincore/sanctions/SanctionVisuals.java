@@ -3,15 +3,12 @@ package fr.dragon.admincore.sanctions;
 import fr.dragon.admincore.util.ConfigLoader;
 import fr.dragon.admincore.util.MessageFormatter;
 import fr.dragon.admincore.util.TimeParser;
-import java.util.ArrayList;
-import java.util.List;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.event.ClickEvent;
-import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.JoinConfiguration;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
-import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 
 public final class SanctionVisuals {
 
@@ -19,38 +16,31 @@ public final class SanctionVisuals {
     }
 
     public static Component banScreen(final ConfigLoader configLoader, final MessageFormatter formatter, final SanctionRecord record, final String discord) {
-        final List<String> lines = withSanctionLine(configLoader.config().getStringList("sanctions.login-ban-screen"));
-        final TagResolver sanctionResolver = formatter.text("sanction", typeLabel(record.type()));
-        final TagResolver discordResolver = Placeholder.component("discord", discordComponent(discord));
-        if (lines.isEmpty()) {
-            return formatter.block(
-                "sanctions.login-ban-screen",
-                formatter.text("target", record.targetName()),
-                sanctionResolver,
-                formatter.text("reason", record.reason()),
-                formatter.text("actor", record.actorName()),
-                formatter.text("duration", record.expiresAt() == null ? "Permanent" : TimeParser.formatRemaining(record.expiresAt())),
-                formatter.text("expires", record.expiresAt() == null ? "Jamais" : record.expiresAt().toString()),
-                discordResolver
-            );
-        }
-        Component result = Component.empty();
-        for (int index = 0; index < lines.size(); index++) {
-            result = result.append(formatter.deserialize(
-                lines.get(index),
-                formatter.text("target", record.targetName()),
-                sanctionResolver,
-                formatter.text("reason", record.reason()),
-                formatter.text("actor", record.actorName()),
-                formatter.text("duration", record.expiresAt() == null ? "Permanent" : TimeParser.formatRemaining(record.expiresAt())),
-                formatter.text("expires", record.expiresAt() == null ? "Jamais" : record.expiresAt().toString()),
-                discordResolver
-            ));
-            if (index + 1 < lines.size()) {
-                result = result.append(Component.newline());
-            }
-        }
-        return result;
+        return banScreen(configLoader, formatter, record, discord, record.targetName());
+    }
+
+    public static Component banScreen(
+        final ConfigLoader configLoader,
+        final MessageFormatter formatter,
+        final SanctionRecord record,
+        final String discord,
+        final String displayTarget
+    ) {
+        final TextColor gold = TextColor.fromHexString("#ffe45e");
+        final TextColor magenta = TextColor.fromHexString("#d83bff");
+        final TextColor blue = TextColor.fromHexString("#67b9ff");
+        return Component.join(JoinConfiguration.newlines(), java.util.List.of(
+            Component.text("DragonGestion", gold).decorate(TextDecoration.BOLD),
+            Component.empty(),
+            label("Joueur", displayTarget == null || displayTarget.isBlank() ? record.targetName() : displayTarget, magenta),
+            label("Sanction", typeLabel(record.type()), magenta),
+            label("Raison", record.reason(), magenta),
+            label("Par", record.actorName(), magenta),
+            label("Duree", record.expiresAt() == null ? "Permanent" : TimeParser.formatRemaining(record.expiresAt()), magenta),
+            label("Expire", record.expiresAt() == null ? "Jamais" : record.expiresAt().toString(), magenta),
+            Component.empty(),
+            Component.text("Discord: ", blue).append(Component.text(normalizeDiscordText(discord), NamedTextColor.WHITE))
+        ));
     }
 
     public static Component muteMessage(final MessageFormatter formatter, final SanctionRecord record, final String discord) {
@@ -60,25 +50,6 @@ public final class SanctionVisuals {
             formatter.text("duration", record.expiresAt() == null ? "Permanent" : TimeParser.formatRemaining(record.expiresAt())),
             Placeholder.component("discord", discordComponent(discord))
         );
-    }
-
-    private static List<String> withSanctionLine(final List<String> lines) {
-        if (lines.isEmpty() || lines.stream().anyMatch(line -> line.contains("<sanction>"))) {
-            return lines;
-        }
-        final List<String> updated = new ArrayList<>(lines);
-        int insertIndex = -1;
-        for (int index = 0; index < updated.size(); index++) {
-            if (updated.get(index).contains("<target>")) {
-                insertIndex = index + 1;
-                break;
-            }
-        }
-        if (insertIndex < 0 || insertIndex > updated.size()) {
-            insertIndex = Math.min(3, updated.size());
-        }
-        updated.add(insertIndex, "<#d83bff>Sanction :</#d83bff> <white><sanction></white>");
-        return updated;
     }
 
     private static String typeLabel(final SanctionType type) {
@@ -91,19 +62,18 @@ public final class SanctionVisuals {
     }
 
     private static Component discordComponent(final String discord) {
-        final String display = (discord == null || discord.isBlank()) ? "discord.gg/example" : discord.trim();
-        return Component.text(display)
-            .color(NamedTextColor.AQUA)
-            .decorate(TextDecoration.UNDERLINED)
-            .hoverEvent(HoverEvent.showText(Component.text("Cliquer pour ouvrir le Discord")))
-            .clickEvent(ClickEvent.openUrl(normalizeDiscordUrl(display)));
+        return Component.text(normalizeDiscordText(discord), NamedTextColor.AQUA);
     }
 
-    private static String normalizeDiscordUrl(final String raw) {
-        final String value = raw.trim();
-        if (value.startsWith("https://") || value.startsWith("http://")) {
-            return value;
+    private static String normalizeDiscordText(final String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "discord.gg/example";
         }
-        return "https://" + value;
+        return raw.trim();
+    }
+
+    private static Component label(final String label, final String value, final TextColor color) {
+        return Component.text(label + ": ", color)
+            .append(Component.text(value, NamedTextColor.WHITE));
     }
 }

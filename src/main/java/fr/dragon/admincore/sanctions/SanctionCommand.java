@@ -2,6 +2,7 @@ package fr.dragon.admincore.sanctions;
 
 import fr.dragon.admincore.core.AdminCorePlugin;
 import fr.dragon.admincore.core.PermissionService;
+import fr.dragon.admincore.core.StaffActionType;
 import fr.dragon.admincore.core.StaffRole;
 import fr.dragon.admincore.util.TimeParser;
 import java.time.Duration;
@@ -146,6 +147,16 @@ public final class SanctionCommand implements CommandExecutor, TabCompleter {
                 this.plugin.getMessageFormatter().text("reason", record.reason()),
                 this.plugin.getMessageFormatter().text("duration", duration == null ? "Permanent" : TimeParser.format(duration))
             ));
+            this.plugin.getStaffActionLogger().log(
+                sender,
+                StaffActionType.SANCTION_APPLY,
+                record.targetUuid(),
+                record.targetName(),
+                type.name() + " | " + record.reason() + " | " + (duration == null ? "Permanent" : TimeParser.format(duration))
+            );
+            if (type == SanctionType.WARN) {
+                this.plugin.getAlertManager().handleWarnApplied(record);
+            }
             final Player onlineTarget = Bukkit.getPlayer(record.targetUuid());
             if (onlineTarget == null) {
                 return;

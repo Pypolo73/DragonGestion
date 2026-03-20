@@ -2,6 +2,7 @@ package fr.dragon.admincore.inventory;
 
 import fr.dragon.admincore.core.AdminCorePlugin;
 import fr.dragon.admincore.core.PermissionService;
+import fr.dragon.admincore.core.StaffActionType;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -107,6 +108,7 @@ public final class InventoryManagerService {
         }
         final ItemStack[] contents = InventoryMenus.extractEditedContents(inventory, session.targetType());
         session.dataHandle().write(session.targetType(), contents);
+        session.markDirty();
     }
 
     public void shuffle(final Player viewer) {
@@ -150,11 +152,19 @@ public final class InventoryManagerService {
             final InventoryEditorSession session = this.sessions.get(viewer.getUniqueId());
             if (session != null) {
                 session.dataHandle().write(targetType, new ItemStack[targetType.contentSize()]);
+                session.markDirty();
             } else {
                 final InventoryDataHandle handle = new InventoryDataHandle(target);
                 handle.write(targetType, new ItemStack[targetType.contentSize()]);
                 handle.close();
             }
+            this.plugin.getStaffActionLogger().log(
+                viewer,
+                StaffActionType.INVENTORY_CLEAR,
+                target.getUniqueId(),
+                displayName(target),
+                "Clear " + targetType.label().toLowerCase(java.util.Locale.ROOT)
+            );
             viewer.sendMessage(this.plugin.getMessageFormatter().message(
                 "inventory.cleared",
                 this.plugin.getMessageFormatter().text("target", displayName(target))

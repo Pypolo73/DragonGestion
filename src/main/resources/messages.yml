@@ -80,6 +80,7 @@ staffmode:
   spy-disabled: "<prefix><yellow>Spy desactive.</yellow>"
   spy-format: "<gray>[Spy] <white><player></white>: <yellow><message></yellow></gray>"
   stafflist: "<prefix><gray>Staff en ligne: <white><players></white></gray>"
+  teleport-no-target: "<prefix><red>Aucun joueur ou bloc valide n'est vise.</red>"
 
 vanish:
   enabled: "<prefix><green>Vanish active.</green>"
@@ -91,6 +92,24 @@ lookup:
   player-result: "<prefix><gray>Lookup <white><target></white> | IP: <white><ip></white> | client: <white><client></white> | sanctions: <white><historyCount></white></gray>"
   ip-result: "<prefix><gray>IP <white><ip></white> | comptes: <white><accounts></white></gray>"
   alts-result: "<prefix><gray>Alts de <white><target></white>: <white><alts></white></gray>"
+
+reports:
+  created: "<prefix><green>Ton report sur <white><target></white> a ete cree. Ticket #<id>.</green>"
+  notify-actionbar: "<red>Nouveau ticket #<id></red> <gray><reporter> -> <white><target></white></gray>"
+  assigned: "<prefix><yellow>Ticket #<id> assigne.</yellow>"
+  closed: "<prefix><green>Ticket #<id> ferme.</green>"
+  archived: "<prefix><gray>Ticket #<id> archive.</gray>"
+  close-prompt: "<prefix><yellow>Saisis la note de cloture du ticket dans le chat.</yellow>"
+  message-empty: "<prefix><red>Le message du ticket ne peut pas etre vide.</red>"
+
+alerts:
+  triggered: "<prefix><red>Alerte <white><type></white>:</red> <gray><details></gray>"
+
+luckperms:
+  unavailable: "<prefix><red>LuckPerms est absent ou indisponible.</red>"
+  saved: "<prefix><green>Modifications LuckPerms enregistrees.</green>"
+  group-missing: "<prefix><red>Le groupe LuckPerms n'existe plus.</red>"
+  plugin-missing: "<prefix><red>Le plugin cible n'existe plus.</red>"
 
 notes:
   created: "<prefix><green>Note ajoutee pour <white><target></white>.</green>"
@@ -110,6 +129,9 @@ inventory:
   backup-create-offline: "<prefix><red>Le joueur doit etre en ligne pour creer un backup manuel.</red>"
   backup-restored: "<prefix><green>Snapshot <white><type></white> restaure pour <white><target></white>.</green>"
   backup-restore-error: "<prefix><red>La restauration du snapshot a echoue.</red>"
+
+stafflogs:
+  opened: "<prefix><gray>Ouverture des logs staff.</gray>"
 
 admin:
   reload: "<prefix><green>Configuration rechargee.</green>"

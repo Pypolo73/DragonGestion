@@ -26,7 +26,8 @@ public final class ConnectionSanctionListener implements Listener {
                     this.plugin.getConfigLoader(),
                     this.plugin.getMessageFormatter(),
                     record,
-                    this.plugin.getMessageFormatter().raw("discord.link", "discord.gg/example")
+                    this.plugin.getMessageFormatter().raw("discord.link", "discord.gg/example"),
+                    event.getName()
                 )
             ));
         } catch (final Exception exception) {
@@ -47,7 +48,11 @@ public final class ConnectionSanctionListener implements Listener {
             ip,
             clientBrand,
             event.getPlayer().getLevel()
-        );
+        ).thenRun(() -> this.plugin.getAlertManager().handleConnectionRecorded(
+            event.getPlayer().getUniqueId(),
+            event.getPlayer().getName(),
+            ip
+        ));
         this.plugin.getSanctionService().findActiveMute(event.getPlayer().getUniqueId(), event.getPlayer().getName(), ip).thenAccept(activeMute ->
             activeMute.ifPresent(record -> this.plugin.getServer().getScheduler().runTask(this.plugin, () -> {
                 event.getPlayer().sendActionBar(this.plugin.getMessageFormatter().message("sanctions.mute-actionbar"));

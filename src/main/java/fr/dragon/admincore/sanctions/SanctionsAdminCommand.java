@@ -2,9 +2,11 @@ package fr.dragon.admincore.sanctions;
 
 import fr.dragon.admincore.core.AdminCorePlugin;
 import fr.dragon.admincore.core.PermissionService;
+import fr.dragon.admincore.core.StaffActionType;
 import fr.dragon.admincore.database.NoteRepository;
 import fr.dragon.admincore.gui.ActiveSanctionsMenu;
 import fr.dragon.admincore.gui.HistoryMenu;
+import fr.dragon.admincore.lookup.LookupMenus;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -79,6 +81,13 @@ public final class SanctionsAdminCommand implements CommandExecutor, TabComplete
                     this.plugin.getMessageFormatter().text("type", type.name()),
                     this.plugin.getMessageFormatter().text("target", targetName)
                 ));
+                this.plugin.getStaffActionLogger().log(
+                    sender,
+                    StaffActionType.SANCTION_REVOKE,
+                    target.getUniqueId(),
+                    targetName,
+                    "Levee " + type.name()
+                );
                 final Player online = target.getPlayer();
                 if (online != null) {
                     this.plugin.getStaffAccessService().refresh(online);
@@ -138,30 +147,69 @@ public final class SanctionsAdminCommand implements CommandExecutor, TabComplete
             );
             return true;
         }
-        final CompletableFuture<Optional<String>> ipFuture = this.plugin.getSanctionService().findLatestIp(target);
-        final CompletableFuture<List<SanctionRecord>> historyFuture = this.plugin.getSanctionService().history(Bukkit.getOfflinePlayer(target).getUniqueId(), target, 10);
-        final CompletableFuture<fr.dragon.admincore.database.PlayerProfile> profileFuture =
-            this.plugin.getSanctionService().playerProfile(Bukkit.getOfflinePlayer(target).getUniqueId(), target);
-        ipFuture.thenCombine(historyFuture, (ip, history) -> java.util.Map.entry(ip, history)).thenCombine(profileFuture, (entry, profile) -> {
-            sync(() -> {
-                if (entry.getKey().isEmpty() && entry.getValue().isEmpty() && profile.name() == null) {
-                    sender.sendMessage(this.plugin.getMessageFormatter().message("errors.no-player-found"));
-                    return;
-                }
-                sender.sendMessage(this.plugin.getMessageFormatter().message(
-                    "lookup.player-result",
-                    this.plugin.getMessageFormatter().text("target", target),
-                    this.plugin.getMessageFormatter().text("ip", entry.getKey().orElse("inconnue")),
-                    this.plugin.getMessageFormatter().text("historyCount", Integer.toString(entry.getValue().size())),
-                    this.plugin.getMessageFormatter().text("client", profile.clientBrand() == null ? "inconnu" : profile.clientBrand())
-                ));
-                if (sender instanceof Player player) {
-                    HistoryMenu.open(player, target, entry.getValue());
-                }
-            });
+        final Player online = Bukkit.getPlayer(target);
+        if (online != null) {
+            openLookup(sender, online.getUniqueId(), online.getName());
+            return true;
+        }
+        this.plugin.getSanctionService().searchPlayerNames(target, 10).thenAccept(matches -> {
+            final String resolvedName = matches.stream()
+                .filter(name -> name.equalsIgnoreCase(target))
+                .findFirst()
+                .orElse(null);
+            if (resolvedName == null) {
+                sync(() -> sender.sendMessage(this.plugin.getMessageFormatter().message("errors.no-player-found")));
+                return;
+            }
+            openLookup(sender, null, resolvedName);
+        }).exceptionally(throwable -> {
+            sync(() -> sender.sendMessage(this.plugin.getMessageFormatter().message("errors.database")));
             return null;
         });
         return true;
+    }
+
+    private void openLookup(final CommandSender sender, final java.util.UUID initialUuid, final String resolvedName) {
+        final CompletableFuture<fr.dragon.admincore.database.PlayerProfile> profileFuture =
+            this.plugin.getSanctionService().playerProfile(initialUuid, resolvedName);
+        final CompletableFuture<Optional<String>> ipFuture =
+            this.plugin.getSanctionService().findLatestIp(resolvedName);
+
+        profileFuture.thenCompose(profile -> {
+            final java.util.UUID effectiveUuid = profile.uuid() == null ? initialUuid : profile.uuid();
+            final CompletableFuture<List<SanctionRecord>> historyFuture =
+                this.plugin.getSanctionService().history(effectiveUuid, resolvedName, 10);
+            final CompletableFuture<fr.dragon.admincore.lookup.SessionSummary> sessionsFuture =
+                this.plugin.getLookupService().summary(effectiveUuid, resolvedName);
+            return ipFuture.thenCombine(historyFuture, (ip, history) -> java.util.Map.entry(ip, history))
+                .thenCombine(sessionsFuture, (entry, sessions) -> new LookupResult(
+                    effectiveUuid,
+                    resolvedName,
+                    profile,
+                    entry.getKey(),
+                    entry.getValue(),
+                    sessions
+                ));
+        }).thenAccept(result ->
+            sync(() -> {
+                final String displayName = result.profile().name() == null || result.profile().name().isBlank()
+                    ? result.resolvedName()
+                    : result.profile().name();
+                sender.sendMessage(this.plugin.getMessageFormatter().message(
+                    "lookup.player-result",
+                    this.plugin.getMessageFormatter().text("target", displayName),
+                    this.plugin.getMessageFormatter().text("ip", result.ip().orElse("inconnue")),
+                    this.plugin.getMessageFormatter().text("historyCount", Integer.toString(result.history().size())),
+                    this.plugin.getMessageFormatter().text("client", result.profile().clientBrand() == null ? "inconnu" : result.profile().clientBrand())
+                ));
+                if (sender instanceof Player player) {
+                    LookupMenus.openOverview(player, result.targetUuid(), displayName, result.profile(), result.sessions());
+                }
+            })
+        ).exceptionally(throwable -> {
+            sync(() -> sender.sendMessage(this.plugin.getMessageFormatter().message("errors.database")));
+            return null;
+        });
     }
 
     private boolean handleAlts(final CommandSender sender, final String targetName) {
@@ -319,6 +367,16 @@ public final class SanctionsAdminCommand implements CommandExecutor, TabComplete
 
     private void sync(final Runnable runnable) {
         this.plugin.getServer().getScheduler().runTask(this.plugin, runnable);
+    }
+
+    private record LookupResult(
+        java.util.UUID targetUuid,
+        String resolvedName,
+        fr.dragon.admincore.database.PlayerProfile profile,
+        Optional<String> ip,
+        List<SanctionRecord> history,
+        fr.dragon.admincore.lookup.SessionSummary sessions
+    ) {
     }
 
     @Override

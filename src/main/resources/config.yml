@@ -4,6 +4,9 @@
 general:
   server-name: "paper-1"
 
+network:
+  server_name: "paper-1"
+
 database:
   # SQLITE or MYSQL
   type: SQLITE
@@ -41,7 +44,7 @@ sanctions:
       - "12h"
       - "1d"
       - "3d"
-      - "1w"
+      - "7d"
       - "1mo"
   login-ban-screen:
     - "<gradient:#ffe45e:#ff9f1c><bold>DragonGestion</bold></gradient>"
@@ -172,3 +175,18 @@ vpn-check:
   url-template: "https://example.com/check?ip={ip}"
   # A simple string check on the response body.
   true-match: "\"proxy\":true"
+
+alerts:
+  warns_threshold: 3
+  warns_window_minutes: 60
+  alts_threshold: 3
+  connections_threshold: 5
+  connections_window_minutes: 15
+
+reports:
+  categories:
+    - "Triche / Hack"
+    - "Comportement toxique"
+    - "Spam / Pub / Arnaque"
+    - "Bug exploite"
+    - "Autre"

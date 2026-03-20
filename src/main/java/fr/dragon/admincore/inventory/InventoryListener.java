@@ -1,6 +1,7 @@
 package fr.dragon.admincore.inventory;
 
 import fr.dragon.admincore.core.AdminCorePlugin;
+import fr.dragon.admincore.core.StaffActionType;
 import java.util.List;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -97,7 +98,17 @@ public final class InventoryListener implements Listener {
         if (!(holder instanceof InventoryMenuContext.EditHolder)) {
             return;
         }
+        final InventoryEditorSession session = this.plugin.getInventoryManagerService().session(player.getUniqueId()).orElse(null);
         this.plugin.getInventoryManagerService().synchronize(player, event.getInventory());
+        if (session != null && session.dirty()) {
+            this.plugin.getStaffActionLogger().log(
+                player,
+                StaffActionType.INVENTORY_EDIT,
+                session.targetUuid(),
+                session.targetName(),
+                "Sauvegarde " + session.targetType().label().toLowerCase(java.util.Locale.ROOT)
+            );
+        }
         this.plugin.getInventoryManagerService().closeSession(player.getUniqueId());
     }
 
