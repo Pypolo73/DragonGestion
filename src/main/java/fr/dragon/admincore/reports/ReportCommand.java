@@ -4,6 +4,7 @@ import fr.dragon.admincore.core.AdminCorePlugin;
 import fr.dragon.admincore.dialog.ReportCategoryDialog;
 import fr.dragon.admincore.dialog.ReportDescriptionDialog;
 import fr.dragon.admincore.dialog.ReportDiscordDialog;
+import fr.dragon.admincore.database.PlayerProfile;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -65,11 +66,8 @@ public final class ReportCommand implements CommandExecutor, TabCompleter {
         final List<String> categories = reportCategories();
         reporter.showDialog(ReportCategoryDialog.create(categories, (response, audience) -> {
             final String category = response.getText("categorie");
-            if (category == null || category.isBlank()) {
-                reporter.sendMessage(this.plugin.getMessageFormatter().message("dialogs.action-cancelled"));
-                return;
-            }
-            openDescriptionStep(reporter, target, discord, category);
+            final String effectiveCategory = (category == null || category.isBlank()) ? categories.getFirst() : category.trim();
+            openDescriptionStep(reporter, target, discord, effectiveCategory);
         }));
     }
 
@@ -114,16 +112,14 @@ public final class ReportCommand implements CommandExecutor, TabCompleter {
         if (online != null) {
             return CompletableFuture.completedFuture(new ReportTarget(online.getUniqueId(), online.getName()));
         }
-        return this.plugin.getSanctionService().searchPlayerNames(rawName, 20).thenApply(matches ->
-            matches.stream()
-                .filter(name -> name.equalsIgnoreCase(rawName))
-                .findFirst()
-                .map(name -> {
-                    final org.bukkit.OfflinePlayer offline = Bukkit.getOfflinePlayer(name);
-                    return new ReportTarget(offline.getUniqueId(), name);
-                })
-                .orElse(null)
-        );
+        return this.plugin.getSanctionService().playerProfile(null, rawName).thenApply(profile -> toReportTarget(rawName, profile));
+    }
+
+    private ReportTarget toReportTarget(final String rawName, final PlayerProfile profile) {
+        if (profile == null || profile.uuid() == null || profile.name() == null || !profile.name().equalsIgnoreCase(rawName)) {
+            return null;
+        }
+        return new ReportTarget(profile.uuid(), profile.name());
     }
 
     private record ReportTarget(UUID uuid, String name) {

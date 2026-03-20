@@ -23,7 +23,6 @@
         <hikari.version>5.1.0</hikari.version>
         <sqlite.version>3.49.1.0</sqlite.version>
         <mysql.version>8.4.0</mysql.version>
-        <luckperms.version>5.4</luckperms.version>
     </properties>
 
     <repositories>
@@ -52,12 +51,6 @@
             <groupId>net.shortninja.staffplus</groupId>
             <artifactId>staffplusplus-api</artifactId>
             <version>${staffplusplus.api.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.luckperms</groupId>
-            <artifactId>api</artifactId>
-            <version>${luckperms.version}</version>
             <scope>provided</scope>
         </dependency>
         <!-- HikariCP is used directly by DatabaseManager and is not provided by Paper. -->

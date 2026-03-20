@@ -16,8 +16,6 @@ import fr.dragon.admincore.gui.GuiListener;
 import fr.dragon.admincore.inventory.InventoryCommand;
 import fr.dragon.admincore.inventory.InventoryListener;
 import fr.dragon.admincore.inventory.InventoryManagerService;
-import fr.dragon.admincore.luckperms.LuckPermsUiService;
-import fr.dragon.admincore.luckperms.StaffLuckPermCommand;
 import fr.dragon.admincore.lookup.LookupService;
 import fr.dragon.admincore.lookup.SessionRepository;
 import fr.dragon.admincore.lookup.SessionTrackingListener;
@@ -70,7 +68,6 @@ public final class AdminCorePlugin extends JavaPlugin {
     private TicketDialogService ticketDialogService;
     private AlertManager alertManager;
     private LookupService lookupService;
-    private LuckPermsUiService luckPermsUiService;
     private BukkitTask runtimeRefreshTask;
 
     @Override
@@ -106,7 +103,6 @@ public final class AdminCorePlugin extends JavaPlugin {
         this.ticketDialogService = new TicketDialogService(this);
         this.alertManager = new AlertManager(this, alertRepository, sanctionRepository, playerRepository);
         this.lookupService = new LookupService(this, sessionRepository);
-        this.luckPermsUiService = new LuckPermsUiService(this);
 
         AdminCoreAPI.bind(this, this.sanctionService, this.vanishService, this.staffModeService, this.chatService, this.playerSessionManager);
 
@@ -213,10 +209,6 @@ public final class AdminCorePlugin extends JavaPlugin {
         return this.lookupService;
     }
 
-    public LuckPermsUiService getLuckPermsUiService() {
-        return this.luckPermsUiService;
-    }
-
     private void registerCommands() {
         final SanctionCommand sanctionCommand = new SanctionCommand(this);
         final SanctionsAdminCommand sanctionsAdminCommand = new SanctionsAdminCommand(this);
@@ -229,7 +221,6 @@ public final class AdminCorePlugin extends JavaPlugin {
         final ReportCommand reportCommand = new ReportCommand(this);
         final TicketCommand ticketCommand = new TicketCommand(this);
         final StaffTicketCommand staffTicketCommand = new StaffTicketCommand(this);
-        final StaffLuckPermCommand staffLuckPermCommand = new StaffLuckPermCommand(this);
 
         bind("tempban", sanctionCommand);
         bind("tempmute", sanctionCommand);
@@ -271,7 +262,6 @@ public final class AdminCorePlugin extends JavaPlugin {
         bind("report", reportCommand);
         bind("ticket", ticketCommand);
         bind("staffticket", staffTicketCommand);
-        bind("staffluckperm", staffLuckPermCommand);
     }
 
     private void registerListeners() {

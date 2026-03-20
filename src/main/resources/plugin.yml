@@ -20,11 +20,6 @@ commands:
     usage: /staffticket <list|view|assign|close|archive|history>
     aliases: [tickets]
     permission: admincore.staffticket
-  staffluckperm:
-    description: Interface Dialog LuckPerms
-    usage: /staffluckperm
-    aliases: [stafflp]
-    permission: admincore.staffluckperm
   stafflogs:
     description: Voir les actions staff
     usage: /stafflogs [staff]
@@ -193,7 +188,6 @@ permissions:
       admincore.alerts: true
       admincore.reports: true
       admincore.staffticket: true
-      admincore.staffluckperm: true
       admincore.inventory.view: true
       admincore.inventory.edit: true
       admincore.inventory.backup: true
@@ -265,8 +259,6 @@ permissions:
   admincore.reports:
     default: op
   admincore.staffticket:
-    default: op
-  admincore.staffluckperm:
     default: op
   admincore.inventory.view:
     default: op

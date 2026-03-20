@@ -185,19 +185,7 @@ modules:
     fonctionnement:
       - "Affiche les actions staff en GUI pagine."
       - "Peut filtrer sur un membre staff."
-      - "Les actions comme sanctions, tickets, vanish, teleportations et editions LuckPerms sont logguees."
-
-  luckperms:
-    description: "Interface staff de navigation et edition LuckPerms."
-    commandes:
-      - "/staffluckperm"
-      - "/stafflp"
-    fonctionnement:
-      - "Ouvre un flow Dialog pour choisir un groupe puis naviguer plugin par plugin."
-      - "Chaque permission affiche un bouton de navigation a gauche et un bouton TRUE/FALSE a droite."
-      - "Le bouton TRUE/FALSE bascule immediatement la valeur puis recharge la vue."
-      - "Les actions disposent d'un undo, redo, save et cancel."
-      - "Les modifications LuckPerms sont logguees dans staff_actions."
+      - "Les actions comme sanctions, tickets, vanish et teleportations sont logguees."
 
   vpn:
     description: "Verification VPN simple."
@@ -218,7 +206,7 @@ base_de_donnees:
 
 softdepends:
   AxInventoryRestore: "Utilise pour les backups d'inventaire et leur GUI natif."
-  LuckPerms: "Utilise pour l'interface staff de gestion des permissions."
+  LuckPerms: "Utilise pour certaines integrations facultatives de roles et d'affichage."
 
 permissions_importantes:
   - "admincore.*"
@@ -230,7 +218,6 @@ permissions_importantes:
   - "admincore.reports"
   - "admincore.staffticket"
   - "admincore.stafflogs"
-  - "admincore.staffluckperm"
   - "admincore.inventory.view"
   - "admincore.inventory.edit"
   - "admincore.inventory.backup"

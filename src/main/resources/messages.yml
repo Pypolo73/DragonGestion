@@ -112,12 +112,6 @@ reports:
 alerts:
   triggered: "<prefix><red>Alerte <white><type></white>:</red> <gray><details></gray>"
 
-luckperms:
-  unavailable: "<prefix><red>LuckPerms est absent ou indisponible.</red>"
-  saved: "<prefix><green>Modifications LuckPerms enregistrees.</green>"
-  group-missing: "<prefix><red>Le groupe LuckPerms n'existe plus.</red>"
-  plugin-missing: "<prefix><red>Le plugin cible n'existe plus.</red>"
-
 notes:
   created: "<prefix><green>Note ajoutee pour <white><target></white>.</green>"
   header: "<prefix><gray>Notes pour <white><target></white>:</gray>"
