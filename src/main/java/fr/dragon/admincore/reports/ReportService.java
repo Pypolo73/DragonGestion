@@ -143,7 +143,12 @@ public final class ReportService {
         if (message.isBlank()) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("Message vide"));
         }
-        return this.repository.addMessage(ticket.id(), staff.getUniqueId(), staff.getName(), message, true)
+        return this.repository.findById(ticket.id()).thenCompose(optional -> {
+            if (optional.isEmpty() || optional.get().status() == TicketStatus.CLOSED || optional.get().status() == TicketStatus.ARCHIVED) {
+                return CompletableFuture.failedFuture(new IllegalStateException("Ticket ferme"));
+            }
+            return this.repository.addMessage(ticket.id(), staff.getUniqueId(), staff.getName(), message, true);
+        })
             .thenAccept(record -> {
                 this.plugin.getStaffActionLogger().log(
                     staff,
@@ -174,20 +179,33 @@ public final class ReportService {
         if (message.isBlank()) {
             return CompletableFuture.failedFuture(new IllegalArgumentException("Message vide"));
         }
-        return this.repository.addMessage(ticket.id(), reporter.getUniqueId(), reporter.getName(), message, false)
-            .thenRun(() -> {
-                final Player assigned = ticket.assignedStaffUuid() == null ? null : Bukkit.getPlayer(ticket.assignedStaffUuid());
+        return this.repository.findById(ticket.id()).thenCompose(optional -> {
+            if (optional.isEmpty()) {
+                return CompletableFuture.failedFuture(new IllegalStateException("Ticket introuvable"));
+            }
+            final TicketRecord current = optional.get();
+            if (current.reporterUuid() == null || !current.reporterUuid().equals(reporter.getUniqueId())) {
+                return CompletableFuture.failedFuture(new IllegalStateException("Ticket interdit"));
+            }
+            if (current.status() == TicketStatus.CLOSED || current.status() == TicketStatus.ARCHIVED) {
+                return CompletableFuture.failedFuture(new IllegalStateException("Ticket ferme"));
+            }
+            return this.repository.addMessage(current.id(), reporter.getUniqueId(), reporter.getName(), message, false)
+                .thenApply(ignored -> current);
+        })
+            .thenAccept(current -> {
+                final Player assigned = current.assignedStaffUuid() == null ? null : Bukkit.getPlayer(current.assignedStaffUuid());
                 if (assigned != null && assigned.isOnline()) {
                     this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
                         assigned.sendActionBar(this.plugin.getMessageFormatter().deserialize(
                             "<gold>Nouvelle reponse de <white><player></white> sur le ticket <white>#<id></white></gold>",
                             this.plugin.getMessageFormatter().text("player", reporter.getName()),
-                            this.plugin.getMessageFormatter().text("id", Long.toString(ticket.id()))
+                            this.plugin.getMessageFormatter().text("id", Long.toString(current.id()))
                         ))
                     );
                     return;
                 }
-                notifyStaffReply(ticket, reporter.getName());
+                notifyStaffReply(current, reporter.getName());
             });
     }
 
