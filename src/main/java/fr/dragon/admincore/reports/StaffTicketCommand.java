@@ -10,6 +10,7 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 public final class StaffTicketCommand implements CommandExecutor, TabCompleter {
@@ -45,9 +46,10 @@ public final class StaffTicketCommand implements CommandExecutor, TabCompleter {
             case "assign" -> assign(player, args);
             case "close" -> close(player, args);
             case "archive" -> archive(player, args);
+            case "history" -> history(player, args);
             default -> {
                 player.sendMessage(this.plugin.getMessageFormatter().deserialize(
-                    "<prefix><red>Usage: /staffticket <list|view|assign|close|archive></red>"
+                    "<prefix><red>Usage: /staffticket <list|view|assign|close|archive|history></red>"
                 ));
                 yield true;
             }
@@ -113,7 +115,8 @@ public final class StaffTicketCommand implements CommandExecutor, TabCompleter {
             })
         ).exceptionally(throwable -> {
             this.plugin.getServer().getScheduler().runTask(this.plugin, () -> {
-                if (rootCause(throwable) instanceof IllegalStateException) {
+                final Throwable cause = rootCause(throwable);
+                if (cause instanceof IllegalStateException && "busy".equalsIgnoreCase(cause.getMessage())) {
                     player.sendMessage(this.plugin.getMessageFormatter().message("reports.ticket-busy"));
                     return;
                 }
@@ -185,11 +188,35 @@ public final class StaffTicketCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    private boolean history(final Player player, final String[] args) {
+        if (args.length < 2) {
+            player.sendMessage(this.plugin.getMessageFormatter().deserialize("<prefix><red>Usage: /staffticket history <joueur></red>"));
+            return true;
+        }
+        final String targetName = args[1];
+        final org.bukkit.OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
+        this.plugin.getReportService().history(target.getUniqueId(), targetName, 0).thenAccept(page ->
+            this.plugin.getServer().getScheduler().runTask(this.plugin, () -> TicketMenu.openHistory(player, targetName, page))
+        ).exceptionally(throwable -> {
+            this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
+                player.sendMessage(this.plugin.getMessageFormatter().message("errors.database"))
+            );
+            return null;
+        });
+        return true;
+    }
+
     @Override
     public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
         if (args.length == 1) {
-            return List.of("list", "view", "assign", "close", "archive").stream()
+            return List.of("list", "view", "assign", "close", "archive", "history").stream()
                 .filter(entry -> entry.startsWith(args[0].toLowerCase(Locale.ROOT)))
+                .toList();
+        }
+        if (args.length == 2 && "history".equalsIgnoreCase(args[0])) {
+            return Bukkit.getOnlinePlayers().stream()
+                .map(Player::getName)
+                .filter(entry -> entry.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT)))
                 .toList();
         }
         return List.of();

@@ -27,7 +27,8 @@ public final class ReportService {
 
     public CompletableFuture<TicketRecord> create(
         final Player reporter,
-        final Player target,
+        final UUID targetUuid,
+        final String targetName,
         final String discordReporter,
         final String category,
         final String description
@@ -37,9 +38,9 @@ public final class ReportService {
         final String sanitizedDescription = sanitize(description, 200, "");
         return this.repository.create(
                 reporter.getUniqueId(),
-                target.getUniqueId(),
+                targetUuid,
                 reporter.getName(),
-                target.getName(),
+                targetName,
                 sanitizedDiscord,
                 sanitizedCategory,
                 sanitizedDescription
@@ -48,8 +49,8 @@ public final class ReportService {
                 this.plugin.getStaffActionLogger().log(
                     reporter,
                     StaffActionType.TICKET_CREATE,
-                    target.getUniqueId(),
-                    target.getName(),
+                    targetUuid,
+                    targetName,
                     "Ticket #" + ticket.id() + " | " + sanitizedCategory
                         + (sanitizedDescription.isBlank() ? "" : " | " + sanitizedDescription)
                 );
@@ -76,6 +77,10 @@ public final class ReportService {
 
     public CompletableFuture<TicketRepository.TicketPage> reporterPage(final UUID reporterUuid, final int page, final int pageSize) {
         return this.repository.reporterTickets(reporterUuid, page, pageSize);
+    }
+
+    public CompletableFuture<java.util.List<TicketRecord>> activeTicketsForPlayer(final UUID playerUuid, final int limit) {
+        return this.repository.activeTicketsForPlayer(playerUuid, limit);
     }
 
     public CompletableFuture<java.util.Optional<TicketRecord>> ticket(final long ticketId) {
@@ -184,7 +189,9 @@ public final class ReportService {
                 return CompletableFuture.failedFuture(new IllegalStateException("Ticket introuvable"));
             }
             final TicketRecord current = optional.get();
-            if (current.reporterUuid() == null || !current.reporterUuid().equals(reporter.getUniqueId())) {
+            final boolean isReporter = current.reporterUuid() != null && current.reporterUuid().equals(reporter.getUniqueId());
+            final boolean isTarget = current.targetUuid() != null && current.targetUuid().equals(reporter.getUniqueId());
+            if (!isReporter && !isTarget) {
                 return CompletableFuture.failedFuture(new IllegalStateException("Ticket interdit"));
             }
             if (current.status() == TicketStatus.CLOSED || current.status() == TicketStatus.ARCHIVED) {

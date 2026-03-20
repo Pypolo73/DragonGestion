@@ -122,13 +122,14 @@ public final class TicketRepository {
             try (PreparedStatement statement = connection.prepareStatement("""
                 SELECT *
                 FROM tickets
-                WHERE uuid_reporter = ?
+                WHERE uuid_reporter = ? OR uuid_cible = ?
                 ORDER BY timestamp DESC
                 LIMIT ? OFFSET ?
                 """)) {
                 statement.setString(1, reporterUuid.toString());
-                statement.setInt(2, pageSize + 1);
-                statement.setInt(3, Math.max(0, page) * pageSize);
+                statement.setString(2, reporterUuid.toString());
+                statement.setInt(3, pageSize + 1);
+                statement.setInt(4, Math.max(0, page) * pageSize);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     final List<TicketRecord> entries = new ArrayList<>();
                     while (resultSet.next()) {
@@ -142,6 +143,32 @@ public final class TicketRepository {
                 }
             } catch (final Exception exception) {
                 throw new IllegalStateException("Lecture des tickets du reporter impossible", exception);
+            }
+        });
+    }
+
+    public CompletableFuture<List<TicketRecord>> activeTicketsForPlayer(final UUID playerUuid, final int limit) {
+        return this.databaseManager.query(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT *
+                FROM tickets
+                WHERE statut IN ('OPEN', 'IN_PROGRESS')
+                  AND (uuid_reporter = ? OR uuid_cible = ?)
+                ORDER BY timestamp DESC
+                LIMIT ?
+                """)) {
+                statement.setString(1, playerUuid.toString());
+                statement.setString(2, playerUuid.toString());
+                statement.setInt(3, Math.max(1, limit));
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    final List<TicketRecord> entries = new ArrayList<>();
+                    while (resultSet.next()) {
+                        entries.add(map(resultSet));
+                    }
+                    return entries;
+                }
+            } catch (final Exception exception) {
+                throw new IllegalStateException("Lecture des tickets actifs du joueur impossible", exception);
             }
         });
     }

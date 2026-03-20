@@ -26,6 +26,7 @@ import fr.dragon.admincore.reports.ReportService;
 import fr.dragon.admincore.reports.StaffTicketCommand;
 import fr.dragon.admincore.reports.TicketCommand;
 import fr.dragon.admincore.reports.TicketDialogService;
+import fr.dragon.admincore.reports.TicketNotificationListener;
 import fr.dragon.admincore.reports.TicketRepository;
 import fr.dragon.admincore.sanctions.ConnectionSanctionListener;
 import fr.dragon.admincore.sanctions.SanctionApprovalService;
@@ -279,6 +280,7 @@ public final class AdminCorePlugin extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new StaffModeListener(this), this);
         Bukkit.getPluginManager().registerEvents(new GuiListener(this), this);
         Bukkit.getPluginManager().registerEvents(new InventoryListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new TicketNotificationListener(this), this);
         Bukkit.getPluginManager().registerEvents(this.alertManager, this);
         Bukkit.getPluginManager().registerEvents(new SessionTrackingListener(this), this);
     }

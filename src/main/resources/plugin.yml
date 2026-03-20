@@ -17,7 +17,7 @@ commands:
     usage: /ticket <list|reply>
   staffticket:
     description: Gestion staff des tickets
-    usage: /staffticket <list|view|assign|close|archive>
+    usage: /staffticket <list|view|assign|close|archive|history>
     aliases: [tickets]
     permission: admincore.staffticket
   staffluckperm:

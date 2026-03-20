@@ -107,6 +107,7 @@ reports:
   ticket-not-active: "<prefix><red>Ce ticket est ferme ou archive.</red>"
   ticket-busy: "<prefix><red>Ce ticket est deja pris en charge par un autre staff.</red>"
   ticket-archive-invalid: "<prefix><red>Seuls les tickets fermes peuvent etre archives.</red>"
+  discord-priority: "<prefix><gray>Si possible, privilegie les tickets Discord pour une meilleure facilite.</gray>"
 
 alerts:
   triggered: "<prefix><red>Alerte <white><type></white>:</red> <gray><details></gray>"

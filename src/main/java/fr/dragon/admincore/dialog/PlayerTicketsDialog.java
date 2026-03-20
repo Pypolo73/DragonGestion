@@ -47,7 +47,10 @@ public final class PlayerTicketsDialog {
                 }, DialogHelper.singleUseOptions())
             ));
         }
-        final List<DialogBody> body = List.of(DialogBody.plainMessage(Component.text("Selectionne un ticket pour y repondre."), 360));
+        final List<DialogBody> body = List.of(
+            DialogBody.plainMessage(Component.text("Selectionne un ticket pour y repondre."), 360),
+            DialogBody.plainMessage(Component.text("Si possible, privilegie Discord pour une meilleure facilite."), 360)
+        );
         if (page > 0) {
             actions.add(DialogHelper.button(
                 Component.text("Page precedente"),

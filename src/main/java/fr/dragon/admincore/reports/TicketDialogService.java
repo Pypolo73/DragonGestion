@@ -98,7 +98,8 @@ public final class TicketDialogService {
                 ticket -> openPlayerReply(player, ticket),
                 () -> openPlayerTickets(player, Math.max(0, result.page() - 1)),
                 () -> openPlayerTickets(player, result.page() + 1),
-                player::closeInventory
+                () -> {
+                }
             )))
         ).exceptionally(throwable -> {
             sync(() -> player.sendMessage(this.plugin.getMessageFormatter().message("errors.database")));
@@ -122,7 +123,7 @@ public final class TicketDialogService {
     }
 
     public void openPlayerReply(final Player player, final TicketRecord ticket) {
-        if (!ownsTicket(player.getUniqueId(), ticket)) {
+        if (!isParticipant(player.getUniqueId(), ticket)) {
             player.sendMessage(this.plugin.getMessageFormatter().message("reports.ticket-not-owned"));
             return;
         }
@@ -158,8 +159,9 @@ public final class TicketDialogService {
         });
     }
 
-    private boolean ownsTicket(final UUID playerUuid, final TicketRecord ticket) {
-        return ticket.reporterUuid() != null && ticket.reporterUuid().equals(playerUuid);
+    private boolean isParticipant(final UUID playerUuid, final TicketRecord ticket) {
+        return (ticket.reporterUuid() != null && ticket.reporterUuid().equals(playerUuid))
+            || (ticket.targetUuid() != null && ticket.targetUuid().equals(playerUuid));
     }
 
     private Component ticketMessageError(final Throwable throwable) {
@@ -168,6 +170,18 @@ public final class TicketDialogService {
         }
         if (throwable instanceof IllegalArgumentException) {
             return this.plugin.getMessageFormatter().message("reports.message-empty");
+        }
+        if (throwable instanceof IllegalStateException illegalStateException) {
+            final String message = illegalStateException.getMessage();
+            if ("Ticket ferme".equalsIgnoreCase(message)) {
+                return this.plugin.getMessageFormatter().message("reports.ticket-not-active");
+            }
+            if ("Ticket interdit".equalsIgnoreCase(message)) {
+                return this.plugin.getMessageFormatter().message("reports.ticket-not-owned");
+            }
+            if ("Ticket introuvable".equalsIgnoreCase(message)) {
+                return this.plugin.getMessageFormatter().message("reports.ticket-not-found");
+            }
         }
         return this.plugin.getMessageFormatter().message("errors.database");
     }

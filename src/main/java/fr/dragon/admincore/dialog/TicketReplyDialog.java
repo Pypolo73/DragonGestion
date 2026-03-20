@@ -32,6 +32,7 @@ public final class TicketReplyDialog {
         final List<DialogBody> body = new ArrayList<>();
         body.add(DialogBody.plainMessage(Component.text("Categorie : " + ticket.effectiveCategory()), 360));
         body.add(DialogBody.plainMessage(Component.text("Statut : " + ticket.status().name()), 360));
+        body.add(DialogBody.plainMessage(Component.text("Si possible, privilegie Discord pour une meilleure facilite."), 360));
         body.add(DialogBody.plainMessage(Component.text("Derniers messages :"), 360));
         if (messages.isEmpty()) {
             body.add(DialogBody.plainMessage(Component.text("Aucun message pour le moment."), 360));

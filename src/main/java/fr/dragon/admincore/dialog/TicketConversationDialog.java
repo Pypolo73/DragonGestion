@@ -32,6 +32,7 @@ public final class TicketConversationDialog {
         final List<DialogBody> body = new ArrayList<>();
         body.add(DialogBody.plainMessage(Component.text("Categorie : " + ticket.effectiveCategory()), 360));
         body.add(DialogBody.plainMessage(Component.text("Discord : " + ticket.effectiveDiscord()), 360));
+        body.add(DialogBody.plainMessage(Component.text("Si possible, privilegie Discord pour une meilleure facilite."), 360));
         if (!ticket.effectiveDescription().isBlank()) {
             body.add(DialogBody.plainMessage(Component.text("Signalement : " + ticket.effectiveDescription()), 360));
         }
