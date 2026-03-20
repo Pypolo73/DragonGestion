@@ -9,19 +9,27 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
 final class AxInventoryRestoreBridge {
+
+    private static final String AX_MAIN_CLASS = "com.artillexstudios.axinventoryrestore.AxInventoryRestore";
 
     private final AdminCorePlugin plugin;
     private final boolean available;
 
     AxInventoryRestoreBridge(final AdminCorePlugin plugin) {
         this.plugin = plugin;
-        final Plugin dependency = Bukkit.getPluginManager().getPlugin("AxInventoryRestore");
+        final Plugin dependency = locatePlugin();
         if (dependency == null || !dependency.isEnabled()) {
             this.plugin.getLogger().warning("AxInventoryRestore absent: le GUI de backups d'inventaire sera desactive.");
+            this.available = false;
+            return;
+        }
+        if (!hasCompatibleApi()) {
+            this.plugin.getLogger().warning("AxInventoryRestore detecte, mais son API publique est incompatible avec ce module.");
             this.available = false;
             return;
         }
@@ -76,6 +84,47 @@ final class AxInventoryRestoreBridge {
         }
     }
 
+    CompletableFuture<Void> createBackup(final OfflinePlayer target, final InventoryTarget targetType, final String actorName) {
+        if (!this.available) {
+            return CompletableFuture.failedFuture(new IllegalStateException("AxInventoryRestore indisponible"));
+        }
+        final org.bukkit.entity.Player online = target.getPlayer();
+        if (online == null) {
+            return CompletableFuture.failedFuture(new IllegalStateException("Le joueur doit etre en ligne pour creer un backup manuel"));
+        }
+        return CompletableFuture.runAsync(() -> {
+            try {
+                final Class<?> axClass = Class.forName(AX_MAIN_CLASS);
+                final Object database = axClass.getMethod("getDatabase").invoke(null);
+                final String cause = "Cree par " + actorName;
+                if (targetType.isEnderChest()) {
+                    database.getClass().getMethod("saveInventory", ItemStack[].class, org.bukkit.entity.Player.class, String.class, String.class)
+                        .invoke(database, online.getEnderChest().getStorageContents(), online, "ENDER_CHEST", cause);
+                    return;
+                }
+                database.getClass().getMethod("saveInventory", org.bukkit.entity.Player.class, String.class, String.class)
+                    .invoke(database, online, "MANUAL", cause);
+            } catch (final Exception exception) {
+                throw new IllegalStateException("Impossible de creer un backup manuel AxInventoryRestore", exception);
+            }
+        });
+    }
+
+    void openNativeGui(final Player viewer, final OfflinePlayer target) {
+        if (!this.available) {
+            throw new IllegalStateException("AxInventoryRestore indisponible");
+        }
+        try {
+            final Class<?> mainGuiClass = Class.forName("com.artillexstudios.axinventoryrestore.guis.MainGui");
+            final Object mainGui = mainGuiClass
+                .getConstructor(UUID.class, Player.class, String.class)
+                .newInstance(target.getUniqueId(), viewer, target.getName() == null ? target.getUniqueId().toString() : target.getName());
+            mainGuiClass.getMethod("open").invoke(mainGui);
+        } catch (final Exception exception) {
+            throw new IllegalStateException("Impossible d'ouvrir le GUI AxInventoryRestore", exception);
+        }
+    }
+
     private static boolean accept(final InventoryTarget targetType, final String reason) {
         return targetType.isEnderChest() ? "ENDER_CHEST".equalsIgnoreCase(reason) : !"ENDER_CHEST".equalsIgnoreCase(reason);
     }
@@ -101,6 +150,41 @@ final class AxInventoryRestoreBridge {
             return ((Number) target.getClass().getMethod(method).invoke(target)).longValue();
         } catch (final Exception exception) {
             throw new IllegalStateException(exception);
+        }
+    }
+
+    private Plugin locatePlugin() {
+        final Plugin exact = Bukkit.getPluginManager().getPlugin("AxInventoryRestore");
+        if (exact != null) {
+            return exact;
+        }
+        final Plugin alias = Bukkit.getPluginManager().getPlugin("AxInventoryBackup");
+        if (alias != null) {
+            return alias;
+        }
+        for (final Plugin plugin : Bukkit.getPluginManager().getPlugins()) {
+            if (AX_MAIN_CLASS.equals(plugin.getDescription().getMain())) {
+                return plugin;
+            }
+        }
+        return null;
+    }
+
+    private boolean hasCompatibleApi() {
+        try {
+            final Class<?> axClass = Class.forName(AX_MAIN_CLASS);
+            final Method getDatabase = axClass.getMethod("getDatabase");
+            final Object database = getDatabase.invoke(null);
+            if (database == null) {
+                return false;
+            }
+            database.getClass().getMethod("getBackupsOfPlayer", UUID.class);
+            final Class<?> backupDataClass = Class.forName("com.artillexstudios.axinventoryrestore.backups.BackupData");
+            backupDataClass.getMethod("getItems");
+            backupDataClass.getMethod("getReason");
+            return true;
+        } catch (final Exception exception) {
+            return false;
         }
     }
 }

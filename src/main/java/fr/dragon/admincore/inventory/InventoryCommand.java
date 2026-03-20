@@ -41,7 +41,7 @@ public final class InventoryCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(this.plugin.getMessageFormatter().message("errors.no-player-found"));
             return true;
         }
-        this.plugin.getInventoryManagerService().openSelector(player, target);
+        this.plugin.getInventoryManagerService().openActionSelection(player, target);
         return true;
     }
 

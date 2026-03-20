@@ -13,7 +13,6 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.InventoryView;
-import org.bukkit.inventory.ItemStack;
 
 public final class InventoryListener implements Listener {
 
@@ -29,6 +28,10 @@ public final class InventoryListener implements Listener {
             return;
         }
         final Object holder = event.getInventory().getHolder();
+        if (holder instanceof InventoryMenuContext.ActionHolder actionHolder) {
+            handleActionSelectorClick(player, actionHolder, event);
+            return;
+        }
         if (holder instanceof InventoryMenuContext.SelectorHolder selectorHolder) {
             handleSelectorClick(player, selectorHolder, event);
             return;
@@ -56,7 +59,8 @@ public final class InventoryListener implements Listener {
             return;
         }
         final Object holder = event.getInventory().getHolder();
-        if (holder instanceof InventoryMenuContext.SelectorHolder
+        if (holder instanceof InventoryMenuContext.ActionHolder
+            || holder instanceof InventoryMenuContext.SelectorHolder
             || holder instanceof InventoryMenuContext.ReadOnlyHolder
             || holder instanceof InventoryMenuContext.BackupsHolder
             || holder instanceof InventoryMenuContext.ConfirmHolder) {
@@ -66,15 +70,22 @@ public final class InventoryListener implements Listener {
         if (!(holder instanceof InventoryMenuContext.EditHolder editHolder)) {
             return;
         }
+        boolean touchesTop = false;
         for (final int rawSlot : event.getRawSlots()) {
+            if (rawSlot >= event.getView().getTopInventory().getSize()) {
+                continue;
+            }
+            touchesTop = true;
             if (!InventoryMenus.isEditableContentSlot(editHolder.targetType(), rawSlot)) {
                 event.setCancelled(true);
                 return;
             }
         }
-        this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
-            this.plugin.getInventoryManagerService().synchronize(player, event.getInventory(), player.getItemOnCursor())
-        );
+        if (touchesTop) {
+            this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
+                this.plugin.getInventoryManagerService().synchronize(player, event.getView().getTopInventory())
+            );
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -86,8 +97,31 @@ public final class InventoryListener implements Listener {
         if (!(holder instanceof InventoryMenuContext.EditHolder)) {
             return;
         }
-        this.plugin.getInventoryManagerService().synchronize(player, event.getInventory(), player.getItemOnCursor());
+        this.plugin.getInventoryManagerService().synchronize(player, event.getInventory());
         this.plugin.getInventoryManagerService().closeSession(player.getUniqueId());
+    }
+
+    private void handleActionSelectorClick(final Player player, final InventoryMenuContext.ActionHolder holder, final InventoryClickEvent event) {
+        event.setCancelled(true);
+        if (event.getRawSlot() >= event.getView().getTopInventory().getSize()) {
+            return;
+        }
+        final org.bukkit.OfflinePlayer target = Bukkit.getOfflinePlayer(holder.targetUuid());
+        if (event.getRawSlot() == 10) {
+            this.plugin.getInventoryManagerService().openSelector(player, target, InventorySelectorAction.VIEW);
+            return;
+        }
+        if (holder.canEdit() && event.getRawSlot() == 13) {
+            this.plugin.getInventoryManagerService().openSelector(player, target, InventorySelectorAction.EDIT);
+            return;
+        }
+        if (holder.canCreateBackup() && event.getRawSlot() == 16) {
+            this.plugin.getInventoryManagerService().openSelector(player, target, InventorySelectorAction.BACKUP);
+            return;
+        }
+        if (event.getRawSlot() == 22) {
+            player.closeInventory();
+        }
     }
 
     private void handleSelectorClick(final Player player, final InventoryMenuContext.SelectorHolder holder, final InventoryClickEvent event) {
@@ -96,32 +130,44 @@ public final class InventoryListener implements Listener {
             return;
         }
         final org.bukkit.OfflinePlayer target = Bukkit.getOfflinePlayer(holder.targetUuid());
-        if (event.getRawSlot() == 10) {
-            this.plugin.getInventoryManagerService().openReadOnly(player, target, InventoryTarget.INVENTORY);
+        if (event.getRawSlot() == 11) {
+            applySelectorAction(player, target, holder.targetName(), holder.action(), InventoryTarget.INVENTORY);
             return;
         }
-        if (event.getRawSlot() == 12) {
-            this.plugin.getInventoryManagerService().openReadOnly(player, target, InventoryTarget.ENDER_CHEST);
-            return;
-        }
-        if (holder.canEdit() && event.getRawSlot() == 14) {
-            this.plugin.getInventoryManagerService().openEditor(player, target, InventoryTarget.INVENTORY);
-            return;
-        }
-        if (holder.canEdit() && event.getRawSlot() == 16) {
-            this.plugin.getInventoryManagerService().openEditor(player, target, InventoryTarget.ENDER_CHEST);
+        if (event.getRawSlot() == 15) {
+            applySelectorAction(player, target, holder.targetName(), holder.action(), InventoryTarget.ENDER_CHEST);
             return;
         }
         if (event.getRawSlot() == 22) {
-            player.closeInventory();
+            this.plugin.getInventoryManagerService().openActionSelection(player, target);
+        }
+    }
+
+    private void applySelectorAction(
+        final Player player,
+        final org.bukkit.OfflinePlayer target,
+        final String targetName,
+        final InventorySelectorAction action,
+        final InventoryTarget targetType
+    ) {
+        switch (action) {
+            case VIEW -> this.plugin.getInventoryManagerService().openReadOnly(player, target, targetType);
+            case EDIT -> this.plugin.getInventoryManagerService().openEditor(player, target, targetType);
+            case BACKUP -> this.plugin.getInventoryManagerService().createBackup(player, target, targetType);
         }
     }
 
     private void handleEditClick(final Player player, final InventoryMenuContext.EditHolder holder, final InventoryClickEvent event) {
         final int rawSlot = event.getRawSlot();
         final InventoryView view = event.getView();
-        if (rawSlot >= view.getTopInventory().getSize() || event.getClickedInventory() == null) {
+        if (event.getClickedInventory() == null) {
             event.setCancelled(true);
+            return;
+        }
+        if (rawSlot >= view.getTopInventory().getSize()) {
+            this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
+                this.plugin.getInventoryManagerService().synchronize(player, view.getTopInventory())
+            );
             return;
         }
         if (rawSlot == 45 && !holder.targetType().isEnderChest()) {
@@ -144,15 +190,12 @@ public final class InventoryListener implements Listener {
             return;
         }
         if (event.getClick() == ClickType.DOUBLE_CLICK
-            || event.getClick() == ClickType.NUMBER_KEY
-            || event.getClick() == ClickType.SWAP_OFFHAND
-            || event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY
             || event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
             event.setCancelled(true);
             return;
         }
         this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
-            this.plugin.getInventoryManagerService().synchronize(player, view.getTopInventory(), player.getItemOnCursor())
+            this.plugin.getInventoryManagerService().synchronize(player, view.getTopInventory())
         );
     }
 

@@ -4,11 +4,6 @@ import fr.dragon.admincore.chat.ChatService;
 import fr.dragon.admincore.chat.ChatServiceImpl;
 import fr.dragon.admincore.chat.ChatCommand;
 import fr.dragon.admincore.chat.ChatListener;
-import fr.dragon.admincore.core.compat.EmptyReportService;
-import fr.dragon.admincore.core.compat.StaffPlusPlusBanServiceAdapter;
-import fr.dragon.admincore.core.compat.StaffPlusPlusMuteServiceAdapter;
-import fr.dragon.admincore.core.compat.StaffPlusPlusStaffChatAdapter;
-import fr.dragon.admincore.core.compat.StaffPlusPlusWarningServiceAdapter;
 import fr.dragon.admincore.database.DatabaseManager;
 import fr.dragon.admincore.database.NoteRepository;
 import fr.dragon.admincore.database.PlayerRepository;
@@ -34,21 +29,13 @@ import fr.dragon.admincore.util.MessageFormatter;
 import fr.dragon.admincore.vanish.VanishCommand;
 import fr.dragon.admincore.vanish.VanishService;
 import fr.dragon.admincore.vanish.VanishServiceImpl;
-import net.shortninja.staffplusplus.IStaffPlus;
-import net.shortninja.staffplusplus.ban.BanService;
-import net.shortninja.staffplusplus.mute.MuteService;
-import net.shortninja.staffplusplus.reports.ReportService;
-import net.shortninja.staffplusplus.session.SessionManager;
-import net.shortninja.staffplusplus.staffmode.chat.StaffChatService;
-import net.shortninja.staffplusplus.warnings.WarningService;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.PluginCommand;
-import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
-public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
+public final class AdminCorePlugin extends JavaPlugin {
 
     private ConfigLoader configLoader;
     private MessageFormatter messageFormatter;
@@ -65,12 +52,6 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
     private DialogSupportService dialogSupportService;
     private InventoryManagerService inventoryManagerService;
     private BukkitTask runtimeRefreshTask;
-
-    private StaffChatService staffChatService;
-    private BanService banService;
-    private MuteService muteService;
-    private WarningService warningService;
-    private ReportService reportService;
 
     @Override
     public void onEnable() {
@@ -97,14 +78,7 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
         this.dialogSupportService = new DialogSupportService(this, this.configLoader, this.messageFormatter, this.chatPromptService);
         this.inventoryManagerService = new InventoryManagerService(this);
 
-        this.staffChatService = new StaffPlusPlusStaffChatAdapter(this.chatService);
-        this.banService = new StaffPlusPlusBanServiceAdapter(this, this.sanctionService);
-        this.muteService = new StaffPlusPlusMuteServiceAdapter(this, this.sanctionService);
-        this.warningService = new StaffPlusPlusWarningServiceAdapter(this, this.sanctionService);
-        this.reportService = new EmptyReportService();
-
         AdminCoreAPI.bind(this, this.sanctionService, this.vanishService, this.staffModeService, this.chatService, this.playerSessionManager);
-        Bukkit.getServicesManager().register(IStaffPlus.class, this, this, ServicePriority.Normal);
 
         registerCommands();
         registerListeners();
@@ -112,12 +86,11 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
         for (final var online : Bukkit.getOnlinePlayers()) {
             this.staffAccessService.refresh(online);
         }
-        getLogger().info("AdminCore active. Compatibilite StaffPlusPlus API chargee.");
+        getLogger().info("AdminCore active.");
     }
 
     @Override
     public void onDisable() {
-        Bukkit.getServicesManager().unregister(IStaffPlus.class, this);
         AdminCoreAPI.clear();
         if (this.runtimeRefreshTask != null) {
             this.runtimeRefreshTask.cancel();
@@ -266,35 +239,5 @@ public final class AdminCorePlugin extends JavaPlugin implements IStaffPlus {
                 this.staffAccessService.refresh(online);
             }
         }, seconds * 20L, seconds * 20L);
-    }
-
-    @Override
-    public StaffChatService getStaffChatService() {
-        return this.staffChatService;
-    }
-
-    @Override
-    public SessionManager getSessionManager() {
-        return this.playerSessionManager;
-    }
-
-    @Override
-    public BanService getBanService() {
-        return this.banService;
-    }
-
-    @Override
-    public MuteService getMuteService() {
-        return this.muteService;
-    }
-
-    @Override
-    public ReportService getReportService() {
-        return this.reportService;
-    }
-
-    @Override
-    public WarningService getWarningService() {
-        return this.warningService;
     }
 }

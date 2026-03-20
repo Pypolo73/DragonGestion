@@ -2,10 +2,8 @@ package fr.dragon.admincore.core;
 
 import java.util.Optional;
 import java.util.UUID;
-import net.shortninja.staffplusplus.session.IPlayerSession;
-import net.shortninja.staffplusplus.vanish.VanishType;
 
-public final class PlayerSession implements IPlayerSession {
+public final class PlayerSession {
 
     private final UUID uuid;
     private final String name;
@@ -16,7 +14,7 @@ public final class PlayerSession implements IPlayerSession {
     private boolean muted;
     private boolean vanished;
     private boolean inStaffMode;
-    private VanishType vanishType = VanishType.NONE;
+    private PlayerVanishState vanishType = PlayerVanishState.NONE;
     private boolean canViewStyleIds;
 
     public PlayerSession(final UUID uuid, final String name) {
@@ -24,17 +22,14 @@ public final class PlayerSession implements IPlayerSession {
         this.name = name;
     }
 
-    @Override
     public UUID getUuid() {
         return this.uuid;
     }
 
-    @Override
     public String getName() {
         return this.name;
     }
 
-    @Override
     public boolean isFrozen() {
         return this.frozen;
     }
@@ -43,47 +38,38 @@ public final class PlayerSession implements IPlayerSession {
         this.frozen = frozen;
     }
 
-    @Override
     public void setProtected(final boolean protectedState) {
         this.protectedState = protectedState;
     }
 
-    @Override
     public boolean isProtected() {
         return this.protectedState;
     }
 
-    @Override
     public Optional<String> getActiveStaffChatChannel() {
         return Optional.ofNullable(this.activeStaffChatChannel);
     }
 
-    @Override
     public void setActiveStaffChatChannel(final String activeStaffChatChannel) {
         this.activeStaffChatChannel = activeStaffChatChannel;
     }
 
-    @Override
     public void setUnderInvestigation(final boolean underInvestigation) {
         this.underInvestigation = underInvestigation;
     }
 
-    @Override
     public void setMuted(final boolean muted) {
         this.muted = muted;
     }
 
-    @Override
     public boolean isUnderInvestigation() {
         return this.underInvestigation;
     }
 
-    @Override
     public boolean isMuted() {
         return this.muted;
     }
 
-    @Override
     public boolean isVanished() {
         return this.vanished;
     }
@@ -92,7 +78,6 @@ public final class PlayerSession implements IPlayerSession {
         this.vanished = vanished;
     }
 
-    @Override
     public boolean isInStaffMode() {
         return this.inStaffMode;
     }
@@ -101,16 +86,14 @@ public final class PlayerSession implements IPlayerSession {
         this.inStaffMode = inStaffMode;
     }
 
-    @Override
-    public VanishType getVanishType() {
+    public PlayerVanishState getVanishType() {
         return this.vanishType;
     }
 
-    public void setVanishType(final VanishType vanishType) {
+    public void setVanishType(final PlayerVanishState vanishType) {
         this.vanishType = vanishType;
     }
 
-    @Override
     public void setCanViewStyleIds(final boolean canViewStyleIds) {
         this.canViewStyleIds = canViewStyleIds;
     }

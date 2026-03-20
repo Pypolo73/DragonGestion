@@ -10,7 +10,14 @@ public final class InventoryMenuContext {
     private InventoryMenuContext() {
     }
 
-    public record SelectorHolder(UUID targetUuid, String targetName, boolean canEdit) implements InventoryHolder {
+    public record ActionHolder(UUID targetUuid, String targetName, boolean canEdit, boolean canCreateBackup) implements InventoryHolder {
+        @Override
+        public Inventory getInventory() {
+            return null;
+        }
+    }
+
+    public record SelectorHolder(UUID targetUuid, String targetName, InventorySelectorAction action) implements InventoryHolder {
         @Override
         public Inventory getInventory() {
             return null;

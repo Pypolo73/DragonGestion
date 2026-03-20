@@ -104,6 +104,9 @@ inventory:
   cleared: "<prefix><yellow>Le conteneur de <white><target></white> a ete vide.</yellow>"
   backup-unavailable: "<prefix><red>AxInventoryRestore est absent ou indisponible.</red>"
   backup-disabled: "<prefix><red>Les backups d'inventaire sont desactives dans inventorybackup.yml.</red>"
+  backup-created: "<prefix><green>Backup manuel cree pour <white><target></white> <gray>(<type>)</gray>.</green>"
+  backup-create-error: "<prefix><red>Impossible de creer le backup manuel.</red>"
+  backup-create-offline: "<prefix><red>Le joueur doit etre en ligne pour creer un backup manuel.</red>"
   backup-restored: "<prefix><green>Snapshot <white><type></white> restaure pour <white><target></white>.</green>"
   backup-restore-error: "<prefix><red>La restauration du snapshot a echoue.</red>"
 

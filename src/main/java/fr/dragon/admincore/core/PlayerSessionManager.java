@@ -4,36 +4,30 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import net.shortninja.staffplusplus.session.IPlayerSession;
-import net.shortninja.staffplusplus.session.SessionManager;
 import org.bukkit.entity.Player;
 
-public final class PlayerSessionManager implements SessionManager {
+public final class PlayerSessionManager {
 
     private final Map<UUID, PlayerSession> sessions = new ConcurrentHashMap<>();
 
-    @Override
-    public IPlayerSession get(final UUID uuid) {
+    public PlayerSession get(final UUID uuid) {
         return this.sessions.computeIfAbsent(uuid, ignored -> new PlayerSession(uuid, "unknown"));
     }
 
-    @Override
-    public IPlayerSession get(final Player player) {
+    public PlayerSession get(final Player player) {
         return this.sessions.computeIfAbsent(player.getUniqueId(), ignored -> new PlayerSession(player.getUniqueId(), player.getName()));
     }
 
-    @Override
-    public Collection<? extends IPlayerSession> getAll() {
+    public Collection<PlayerSession> getAll() {
         return this.sessions.values();
     }
 
-    @Override
-    public Collection<? extends IPlayerSession> getOnlineStaffMembers() {
+    public Collection<PlayerSession> getOnlineStaffMembers() {
         return this.sessions.values().stream().filter(PlayerSession::isInStaffMode).toList();
     }
 
     public PlayerSession getOrCreate(final Player player) {
-        return (PlayerSession) get(player);
+        return get(player);
     }
 
     public void updateName(final Player player) {

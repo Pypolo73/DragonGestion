@@ -34,13 +34,38 @@ public final class InventoryManagerService {
         return Optional.ofNullable(this.sessions.get(viewerUuid));
     }
 
-    public void openSelector(final Player viewer, final OfflinePlayer target) {
+    public void openActionSelection(final Player viewer, final OfflinePlayer target) {
+        final boolean canEdit = viewer.hasPermission(PermissionService.INVENTORY_EDIT);
+        final boolean canCreateBackup = viewer.hasPermission(PermissionService.INVENTORY_BACKUP);
+        if (this.plugin.getDialogSupportService().supportsDialogs(viewer)) {
+            viewer.showDialog(fr.dragon.admincore.dialog.InventoryActionDialog.create(
+                displayName(target),
+                canEdit,
+                canCreateBackup,
+                () -> openSelector(viewer, target, InventorySelectorAction.VIEW),
+                () -> openSelector(viewer, target, InventorySelectorAction.EDIT),
+                () -> openSelector(viewer, target, InventorySelectorAction.BACKUP),
+                viewer::closeInventory
+            ));
+            return;
+        }
+        InventoryMenus.openActionSelector(
+            this.plugin,
+            viewer,
+            target.getUniqueId(),
+            displayName(target),
+            canEdit,
+            canCreateBackup
+        );
+    }
+
+    public void openSelector(final Player viewer, final OfflinePlayer target, final InventorySelectorAction action) {
         InventoryMenus.openSelector(
             this.plugin,
             viewer,
             target.getUniqueId(),
             displayName(target),
-            viewer.hasPermission(PermissionService.INVENTORY_EDIT)
+            action
         );
     }
 
@@ -75,16 +100,12 @@ public final class InventoryManagerService {
         }
     }
 
-    public void synchronize(final Player viewer, final Inventory inventory, final ItemStack cursor) {
+    public void synchronize(final Player viewer, final Inventory inventory) {
         final InventoryEditorSession session = this.sessions.get(viewer.getUniqueId());
         if (session == null) {
             return;
         }
         final ItemStack[] contents = InventoryMenus.extractEditedContents(inventory, session.targetType());
-        if (cursor != null && !cursor.getType().isAir()) {
-            mergeCursor(contents, cursor);
-            viewer.setItemOnCursor(null);
-        }
         session.dataHandle().write(session.targetType(), contents);
     }
 
@@ -162,27 +183,49 @@ public final class InventoryManagerService {
             return;
         }
         final OfflinePlayer target = Bukkit.getOfflinePlayer(targetUuid);
-        this.backupBridge.loadSnapshots(target, targetType).whenComplete((snapshots, throwable) ->
+        this.plugin.getServer().getScheduler().runTask(this.plugin, () -> {
+            try {
+                this.backupBridge.openNativeGui(viewer, target);
+            } catch (final Exception exception) {
+                this.plugin.getLogger().warning("Ouverture GUI AxInventoryRestore impossible pour " + targetUuid + ": " + exception.getMessage());
+                viewer.sendMessage(this.plugin.getMessageFormatter().message("inventory.backup-unavailable"));
+                reopenEditor(viewer, targetUuid, targetName, targetType);
+            }
+        });
+    }
+
+    public void createBackup(final Player viewer, final OfflinePlayer target, final InventoryTarget targetType) {
+        if (!viewer.hasPermission(PermissionService.INVENTORY_BACKUP)) {
+            viewer.sendMessage(this.plugin.getMessageFormatter().message("errors.no-permission"));
+            return;
+        }
+        if (!backupsEnabled()) {
+            viewer.sendMessage(this.plugin.getMessageFormatter().message("inventory.backup-disabled"));
+            openSelector(viewer, target, InventorySelectorAction.BACKUP);
+            return;
+        }
+        if (!this.backupBridge.isAvailable()) {
+            viewer.sendMessage(this.plugin.getMessageFormatter().message("inventory.backup-unavailable"));
+            openSelector(viewer, target, InventorySelectorAction.BACKUP);
+            return;
+        }
+        this.backupBridge.createBackup(target, targetType, viewer.getName()).whenComplete((ignored, throwable) ->
             this.plugin.getServer().getScheduler().runTask(this.plugin, () -> {
                 if (throwable != null) {
-                    this.plugin.getLogger().warning("Lecture backups impossible pour " + targetUuid + ": " + throwable.getMessage());
-                    viewer.sendMessage(this.plugin.getMessageFormatter().message("inventory.backup-unavailable"));
-                    reopenEditor(viewer, targetUuid, targetName, targetType);
+                    final String messageKey = target.isOnline()
+                        ? "inventory.backup-create-error"
+                        : "inventory.backup-create-offline";
+                    this.plugin.getLogger().warning("Creation backup impossible pour " + target.getUniqueId() + ": " + throwable.getMessage());
+                    viewer.sendMessage(this.plugin.getMessageFormatter().message(messageKey));
+                    openSelector(viewer, target, InventorySelectorAction.BACKUP);
                     return;
                 }
-                InventoryMenus.openBackups(
-                    this.plugin,
-                    viewer,
-                    targetUuid,
-                    targetName,
-                    targetType,
-                    snapshots,
-                    Math.max(0, page),
-                    true,
-                    retentionDays(),
-                    maxSnapshotsPerPlayer(),
-                    activeTriggers()
-                );
+                viewer.sendMessage(this.plugin.getMessageFormatter().message(
+                    "inventory.backup-created",
+                    this.plugin.getMessageFormatter().text("target", displayName(target)),
+                    this.plugin.getMessageFormatter().text("type", targetType.label())
+                ));
+                openBackups(viewer, target.getUniqueId(), displayName(target), targetType, 0);
             })
         );
     }
@@ -274,11 +317,13 @@ public final class InventoryManagerService {
     }
 
     private int retentionDays() {
-        return Math.max(0, this.plugin.getConfigLoader().inventoryBackup().getInt("retention-days", 30));
+        final int value = this.plugin.getConfigLoader().inventoryBackup().getInt("retention-days", -1);
+        return value < 0 ? -1 : value;
     }
 
     private int maxSnapshotsPerPlayer() {
-        return Math.max(1, this.plugin.getConfigLoader().inventoryBackup().getInt("max-snapshots-per-player", 50));
+        final int value = this.plugin.getConfigLoader().inventoryBackup().getInt("max-snapshots-per-player", -1);
+        return value < 0 ? -1 : Math.max(1, value);
     }
 
     private List<String> activeTriggers() {
@@ -291,16 +336,6 @@ public final class InventoryManagerService {
             .sorted()
             .toList();
     }
-
-    private void mergeCursor(final ItemStack[] contents, final ItemStack cursor) {
-        for (int index = 0; index < contents.length; index++) {
-            if (contents[index] == null || contents[index].getType().isAir()) {
-                contents[index] = cursor.clone();
-                return;
-            }
-        }
-    }
-
     private String displayName(final OfflinePlayer target) {
         return target.getName() == null ? target.getUniqueId().toString() : target.getName();
     }

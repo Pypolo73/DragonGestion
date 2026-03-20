@@ -23,31 +23,32 @@ public final class PresetChoiceDialog {
         final String customLabel,
         final Runnable customCallback,
         final String backLabel,
-        final Runnable backCallback
+        final Runnable backCallback,
+        final int columns
     ) {
         final List<ActionButton> actions = new ArrayList<>();
         for (final String option : options) {
             actions.add(DialogHelper.button(
                 Component.text(option),
-                120,
+                160,
                 DialogAction.customClick((response, audience) -> optionCallback.accept(option), DialogHelper.singleUseOptions())
             ));
         }
         actions.add(DialogHelper.button(
             Component.text(customLabel),
-            150,
+            200,
             DialogAction.customClick((response, audience) -> customCallback.run(), DialogHelper.singleUseOptions())
         ));
         actions.add(DialogHelper.button(
             Component.text(backLabel),
-            120,
+            160,
             DialogAction.customClick((response, audience) -> backCallback.run(), DialogHelper.singleUseOptions())
         ));
         return DialogHelper.create(
             Component.text(title),
-            List.of(DialogBody.plainMessage(Component.text(subtitle), 280)),
+            List.of(DialogBody.plainMessage(Component.text(subtitle), 360)),
             List.of(),
-            DialogType.multiAction(actions, null, 3)
+            DialogType.multiAction(actions, null, Math.max(1, columns))
         );
     }
 }

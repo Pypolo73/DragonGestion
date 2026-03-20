@@ -27,15 +27,16 @@ final class InventoryMenus {
     private InventoryMenus() {
     }
 
-    static void openSelector(
+    static void openActionSelector(
         final AdminCorePlugin plugin,
         final Player viewer,
         final java.util.UUID targetUuid,
         final String targetName,
-        final boolean canEdit
+        final boolean canEdit,
+        final boolean canCreateBackup
     ) {
         final Inventory inventory = Bukkit.createInventory(
-            new InventoryMenuContext.SelectorHolder(targetUuid, targetName, canEdit),
+            new InventoryMenuContext.ActionHolder(targetUuid, targetName, canEdit, canCreateBackup),
             27,
             plugin.getMessageFormatter().deserialize(
                 "<gray>Gestion de </gray><gold><player></gold>",
@@ -45,12 +46,61 @@ final class InventoryMenus {
         for (int slot = 0; slot < inventory.getSize(); slot++) {
             inventory.setItem(slot, filler());
         }
-        inventory.setItem(10, action(Material.CHEST, "<gold>Voir l'inventaire</gold>", List.of("<gray>Ouverture en lecture seule.</gray>")));
-        inventory.setItem(12, action(Material.ENDER_CHEST, "<light_purple>Voir l'enderchest</light_purple>", List.of("<gray>Ouverture en lecture seule.</gray>")));
+        inventory.setItem(10, action(Material.CHEST, "<gold>Voir</gold>", List.of("<gray>Ouvrir en lecture seule.</gray>")));
         if (canEdit) {
-            inventory.setItem(14, action(Material.HOPPER, "<green>Modifier l'inventaire</green>", List.of("<gray>Edition directe des items.</gray>")));
-            inventory.setItem(16, action(Material.SHULKER_BOX, "<aqua>Modifier l'enderchest</aqua>", List.of("<gray>Edition directe des items.</gray>")));
+            inventory.setItem(13, action(Material.HOPPER, "<green>Modifier</green>", List.of("<gray>Ouvrir en mode edition.</gray>")));
         }
+        if (canCreateBackup) {
+            inventory.setItem(16, action(Material.BOOK, "<yellow>Creer un backup</yellow>", List.of("<gray>Creer un snapshot manuel.</gray>")));
+        }
+        inventory.setItem(22, action(Material.BARRIER, "<red>Fermer</red>", List.of()));
+        viewer.openInventory(inventory);
+    }
+
+    static void openSelector(
+        final AdminCorePlugin plugin,
+        final Player viewer,
+        final java.util.UUID targetUuid,
+        final String targetName,
+        final InventorySelectorAction action
+    ) {
+        final Inventory inventory = Bukkit.createInventory(
+            new InventoryMenuContext.SelectorHolder(targetUuid, targetName, action),
+            27,
+            plugin.getMessageFormatter().deserialize(
+                switch (action) {
+                    case VIEW -> "<gray>Voir le conteneur de </gray><gold><player></gold>";
+                    case EDIT -> "<gray>Modifier le conteneur de </gray><gold><player></gold>";
+                    case BACKUP -> "<gray>Creer un backup de </gray><gold><player></gold>";
+                },
+                plugin.getMessageFormatter().text("player", targetName)
+            )
+        );
+        for (int slot = 0; slot < inventory.getSize(); slot++) {
+            inventory.setItem(slot, filler());
+        }
+        final String inventoryLabel = switch (action) {
+            case VIEW -> "<gold>Inventaire</gold>";
+            case EDIT -> "<green>Inventaire</green>";
+            case BACKUP -> "<yellow>Backup inventaire</yellow>";
+        };
+        final String enderLabel = switch (action) {
+            case VIEW -> "<light_purple>Enderchest</light_purple>";
+            case EDIT -> "<aqua>Enderchest</aqua>";
+            case BACKUP -> "<yellow>Backup enderchest</yellow>";
+        };
+        final String inventoryLore = switch (action) {
+            case VIEW -> "<gray>Ouverture en lecture seule.</gray>";
+            case EDIT -> "<gray>Edition directe des items.</gray>";
+            case BACKUP -> "<gray>Cree un snapshot manuel de l'inventaire.</gray>";
+        };
+        final String enderLore = switch (action) {
+            case VIEW -> "<gray>Ouverture en lecture seule.</gray>";
+            case EDIT -> "<gray>Edition directe des items.</gray>";
+            case BACKUP -> "<gray>Cree un snapshot manuel de l'enderchest.</gray>";
+        };
+        inventory.setItem(11, action(Material.CHEST, inventoryLabel, List.of(inventoryLore)));
+        inventory.setItem(15, action(Material.ENDER_CHEST, enderLabel, List.of(enderLore)));
         inventory.setItem(22, action(Material.BARRIER, "<red>Fermer</red>", List.of()));
         viewer.openInventory(inventory);
     }
@@ -229,8 +279,8 @@ final class InventoryMenus {
     ) {
         final List<String> lore = new ArrayList<>();
         lore.add(backupsEnabled ? "<green>Backups actives</green>" : "<red>Backups desactivees</red>");
-        lore.add("<gray>Retention: <white>" + retentionDays + " jours</white></gray>");
-        lore.add("<gray>Max / joueur: <white>" + maxSnapshots + "</white></gray>");
+        lore.add("<gray>Retention: <white>" + formatLimit(retentionDays, "jours") + "</white></gray>");
+        lore.add("<gray>Max / joueur: <white>" + formatLimit(maxSnapshots, null) + "</white></gray>");
         lore.add("<gray>Triggers:</gray>");
         if (activeTriggers.isEmpty()) {
             lore.add("<dark_gray>- aucun</dark_gray>");
@@ -244,6 +294,13 @@ final class InventoryMenus {
 
     private static ItemStack navItem(final Material material, final String title) {
         return action(material, title, List.of());
+    }
+
+    private static String formatLimit(final int value, final String suffix) {
+        if (value < 0) {
+            return "Illimite";
+        }
+        return suffix == null ? String.valueOf(value) : value + " " + suffix;
     }
 
     private static ItemStack filler() {

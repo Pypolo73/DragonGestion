@@ -1,11 +1,11 @@
 package fr.dragon.admincore.vanish;
 
 import fr.dragon.admincore.core.AdminCorePlugin;
+import fr.dragon.admincore.core.PlayerVanishState;
 import fr.dragon.admincore.core.PermissionService;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import net.shortninja.staffplusplus.vanish.VanishType;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Scoreboard;
@@ -34,12 +34,12 @@ public final class VanishServiceImpl implements VanishService {
         if (vanishedState) {
             this.vanished.add(player.getUniqueId());
             this.plugin.getPlayerSessionManager().getOrCreate(player).setVanished(true);
-            this.plugin.getPlayerSessionManager().getOrCreate(player).setVanishType(VanishType.TOTAL);
+            this.plugin.getPlayerSessionManager().getOrCreate(player).setVanishType(PlayerVanishState.TOTAL);
             addToTeam(player);
         } else {
             this.vanished.remove(player.getUniqueId());
             this.plugin.getPlayerSessionManager().getOrCreate(player).setVanished(false);
-            this.plugin.getPlayerSessionManager().getOrCreate(player).setVanishType(VanishType.NONE);
+            this.plugin.getPlayerSessionManager().getOrCreate(player).setVanishType(PlayerVanishState.NONE);
             removeFromTeam(player);
         }
         refreshAll();

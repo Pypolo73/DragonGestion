@@ -255,20 +255,21 @@ public final class DialogSupportService {
     }
 
     private void openReasonSelection(final Player player, final String title, final Consumer<ReasonFlowResult> onConfirm) {
-        final List<String> presets = presetValues("sanctions.presets.reasons", 6);
+        final List<String> presets = presetValues("sanctions.presets.reasons");
         if (presets.isEmpty()) {
             openReasonTextEntry(player, title, onConfirm);
             return;
         }
         player.showDialog(PresetChoiceDialog.create(
-            title,
-            "Choisis une raison rapide ou saisis-la manuellement.",
+            "Raison de la sanction",
+            "Choisis une raison predefinie ou saisis une raison personnalisee.",
             presets,
             preset -> openReasonConfirm(player, title, sanitizeReason(preset), player.getName(), onConfirm),
-            "Raison perso",
+            "Raison personnalisee",
             () -> openReasonTextEntry(player, title, onConfirm),
             "Annuler",
-            () -> player.sendMessage(this.formatter.message("dialogs.action-cancelled"))
+            () -> player.sendMessage(this.formatter.message("dialogs.action-cancelled")),
+            2
         ));
     }
 
@@ -280,20 +281,21 @@ public final class DialogSupportService {
     }
 
     private void openTimedReasonSelection(final Player player, final String title, final Consumer<TimedReasonFlowResult> onConfirm) {
-        final List<String> presets = presetValues("sanctions.presets.reasons", 6);
+        final List<String> presets = presetValues("sanctions.presets.reasons");
         if (presets.isEmpty()) {
             openTimedReasonTextEntry(player, title, onConfirm);
             return;
         }
         player.showDialog(PresetChoiceDialog.create(
-            title,
-            "Choisis une raison rapide avant de definir la duree.",
+            "Raison de la sanction",
+            "Choisis une raison predefinie ou saisis une raison personnalisee.",
             presets,
             preset -> openTimedDurationSelection(player, title, sanitizeReason(preset), onConfirm),
-            "Raison perso",
+            "Raison personnalisee",
             () -> openTimedReasonTextEntry(player, title, onConfirm),
             "Annuler",
-            () -> player.sendMessage(this.formatter.message("dialogs.action-cancelled"))
+            () -> player.sendMessage(this.formatter.message("dialogs.action-cancelled")),
+            2
         ));
     }
 
@@ -305,14 +307,14 @@ public final class DialogSupportService {
     }
 
     private void openTimedDurationSelection(final Player player, final String title, final String reason, final Consumer<TimedReasonFlowResult> onConfirm) {
-        final List<String> presets = presetValues("sanctions.presets.durations", 6);
+        final List<String> presets = presetValues("sanctions.presets.durations");
         if (presets.isEmpty()) {
             openDurationDialog(player, title, reason, "1h", onConfirm);
             return;
         }
         player.showDialog(PresetChoiceDialog.create(
             "Duree de la sanction",
-            "Choisis une duree rapide ou saisis une duree libre.",
+            "Choisis une duree predefinie ou saisis une duree en mois, semaine, jour ou minute.",
             presets,
             preset -> {
                 final Duration duration = TimeParser.parse(preset).orElse(null);
@@ -323,22 +325,22 @@ public final class DialogSupportService {
                 }
                 openTimedConfirm(player, title, reason, duration, player.getName(), preset, onConfirm);
             },
-            "Duree perso",
+            "Duree personnalisee",
             () -> openDurationDialog(player, title, reason, firstDurationPreset(), onConfirm),
             "Retour",
-            () -> openTimedReasonSelection(player, title, onConfirm)
+            () -> openTimedReasonSelection(player, title, onConfirm),
+            2
         ));
     }
 
-    private List<String> presetValues(final String path, final int limit) {
+    private List<String> presetValues(final String path) {
         return this.configLoader.config().getStringList(path).stream()
             .filter(value -> value != null && !value.isBlank())
-            .limit(limit)
             .toList();
     }
 
     private String firstDurationPreset() {
-        final List<String> presets = presetValues("sanctions.presets.durations", 1);
+        final List<String> presets = presetValues("sanctions.presets.durations");
         return presets.isEmpty() ? "1h" : presets.getFirst();
     }
 
