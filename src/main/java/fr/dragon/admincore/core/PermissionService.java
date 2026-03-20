@@ -36,6 +36,7 @@ public final class PermissionService {
     public static final String CHECKVPN = "admincore.checkvpn";
     public static final String ALERTS = "admincore.alerts";
     public static final String REPORTS = "admincore.reports";
+    public static final String STAFFTICKET = "admincore.staffticket";
     public static final String STAFFLUCKPERM = "admincore.staffluckperm";
     public static final String INVENTORY_VIEW = "admincore.inventory.view";
     public static final String INVENTORY_EDIT = "admincore.inventory.edit";

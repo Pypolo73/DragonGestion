@@ -5,6 +5,9 @@ import fr.dragon.admincore.core.PermissionService;
 import fr.dragon.admincore.core.StaffActionType;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
@@ -69,6 +72,14 @@ public final class ReportService {
 
     public CompletableFuture<TicketRepository.TicketPage> archivedPage(final int page) {
         return this.repository.archivedTickets(page, PAGE_SIZE);
+    }
+
+    public CompletableFuture<TicketRepository.TicketPage> reporterPage(final UUID reporterUuid, final int page, final int pageSize) {
+        return this.repository.reporterTickets(reporterUuid, page, pageSize);
+    }
+
+    public CompletableFuture<java.util.Optional<TicketRecord>> ticket(final long ticketId) {
+        return this.repository.findById(ticketId);
     }
 
     public CompletableFuture<TicketRecord> assign(final Player staff, final long ticketId) {
@@ -145,13 +156,38 @@ public final class ReportService {
                 if (target == null) {
                     return;
                 }
-                this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
-                    target.sendMessage(this.plugin.getMessageFormatter().deserialize(
-                        "<gold>[Ticket]</gold> <gray><staff> :</gray> <white><message></white>",
-                        this.plugin.getMessageFormatter().text("staff", staff.getName()),
-                        this.plugin.getMessageFormatter().text("message", message)
-                    ))
-                );
+                final Component replyButton = Component.text("[Repondre]", NamedTextColor.AQUA)
+                    .clickEvent(ClickEvent.runCommand("/ticket reply " + ticket.id()));
+                final Component component = Component.text()
+                    .append(Component.text("[Ticket] ", NamedTextColor.GOLD))
+                    .append(Component.text(staff.getName() + " : ", NamedTextColor.GRAY))
+                    .append(Component.text(message, NamedTextColor.WHITE))
+                    .append(Component.text(" ", NamedTextColor.WHITE))
+                    .append(replyButton)
+                    .build();
+                this.plugin.getServer().getScheduler().runTask(this.plugin, () -> target.sendMessage(component));
+            });
+    }
+
+    public CompletableFuture<Void> sendPlayerReply(final Player reporter, final TicketRecord ticket, final String rawMessage) {
+        final String message = sanitize(rawMessage, 200, "");
+        if (message.isBlank()) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException("Message vide"));
+        }
+        return this.repository.addMessage(ticket.id(), reporter.getUniqueId(), reporter.getName(), message, false)
+            .thenRun(() -> {
+                final Player assigned = ticket.assignedStaffUuid() == null ? null : Bukkit.getPlayer(ticket.assignedStaffUuid());
+                if (assigned != null && assigned.isOnline()) {
+                    this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
+                        assigned.sendActionBar(this.plugin.getMessageFormatter().deserialize(
+                            "<gold>Nouvelle reponse de <white><player></white> sur le ticket <white>#<id></white></gold>",
+                            this.plugin.getMessageFormatter().text("player", reporter.getName()),
+                            this.plugin.getMessageFormatter().text("id", Long.toString(ticket.id()))
+                        ))
+                    );
+                    return;
+                }
+                notifyStaffReply(ticket, reporter.getName());
             });
     }
 
@@ -167,6 +203,23 @@ public final class ReportService {
                 online.sendActionBar(this.plugin.getMessageFormatter().message("reports.notify-actionbar", id, reporter, target));
                 online.playSound(online.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.7f, 1.2f);
             });
+        }
+    }
+
+    private void notifyStaffReply(final TicketRecord ticket, final String reporterName) {
+        final TagResolver id = this.plugin.getMessageFormatter().text("id", Long.toString(ticket.id()));
+        final TagResolver reporter = this.plugin.getMessageFormatter().text("reporter", reporterName);
+        for (final Player online : Bukkit.getOnlinePlayers()) {
+            if (!online.hasPermission(PermissionService.REPORTS)) {
+                continue;
+            }
+            this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
+                online.sendActionBar(this.plugin.getMessageFormatter().deserialize(
+                    "<gold>Nouvelle reponse de <white><reporter></white> sur le ticket <white>#<id></white></gold>",
+                    reporter,
+                    id
+                ))
+            );
         }
     }
 

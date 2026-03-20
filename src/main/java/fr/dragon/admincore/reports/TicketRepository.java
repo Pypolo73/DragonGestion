@@ -117,6 +117,45 @@ public final class TicketRepository {
         return ticketsByStatus(page, pageSize, TicketStatus.ARCHIVED);
     }
 
+    public CompletableFuture<TicketPage> reporterTickets(final UUID reporterUuid, final int page, final int pageSize) {
+        return this.databaseManager.query(connection -> {
+            try (PreparedStatement statement = connection.prepareStatement("""
+                SELECT *
+                FROM tickets
+                WHERE uuid_reporter = ?
+                ORDER BY timestamp DESC
+                LIMIT ? OFFSET ?
+                """)) {
+                statement.setString(1, reporterUuid.toString());
+                statement.setInt(2, pageSize + 1);
+                statement.setInt(3, Math.max(0, page) * pageSize);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    final List<TicketRecord> entries = new ArrayList<>();
+                    while (resultSet.next()) {
+                        entries.add(map(resultSet));
+                    }
+                    final boolean hasNext = entries.size() > pageSize;
+                    if (hasNext) {
+                        entries.removeLast();
+                    }
+                    return new TicketPage(entries, Math.max(0, page), hasNext);
+                }
+            } catch (final Exception exception) {
+                throw new IllegalStateException("Lecture des tickets du reporter impossible", exception);
+            }
+        });
+    }
+
+    public CompletableFuture<Optional<TicketRecord>> findById(final long ticketId) {
+        return this.databaseManager.query(connection -> {
+            try {
+                return findById(connection, ticketId);
+            } catch (final Exception exception) {
+                throw new IllegalStateException("Lecture du ticket impossible", exception);
+            }
+        });
+    }
+
     public CompletableFuture<TicketPage> historyForTarget(final UUID targetUuid, final String targetName, final int page, final int pageSize) {
         return this.databaseManager.query(connection -> {
             try (PreparedStatement statement = connection.prepareStatement("""
