@@ -12,10 +12,14 @@ commands:
   report:
     description: Creer un ticket de report
     usage: /report <joueur>
-  tickets:
-    description: Voir les tickets staff
-    usage: /tickets [history <joueur>]
-    permission: admincore.reports
+  ticket:
+    description: Voir et repondre a ses tickets
+    usage: /ticket <list|reply>
+  staffticket:
+    description: Gestion staff des tickets
+    usage: /staffticket <list|view|assign|close|archive>
+    aliases: [tickets]
+    permission: admincore.staffticket
   staffluckperm:
     description: Interface Dialog LuckPerms
     usage: /staffluckperm
@@ -188,6 +192,7 @@ permissions:
       admincore.checkvpn: true
       admincore.alerts: true
       admincore.reports: true
+      admincore.staffticket: true
       admincore.staffluckperm: true
       admincore.inventory.view: true
       admincore.inventory.edit: true
@@ -258,6 +263,8 @@ permissions:
   admincore.alerts:
     default: op
   admincore.reports:
+    default: op
+  admincore.staffticket:
     default: op
   admincore.staffluckperm:
     default: op

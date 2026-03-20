@@ -101,6 +101,12 @@ reports:
   archived: "<prefix><gray>Ticket #<id> archive.</gray>"
   close-prompt: "<prefix><yellow>Saisis la note de cloture du ticket dans le chat.</yellow>"
   message-empty: "<prefix><red>Le message du ticket ne peut pas etre vide.</red>"
+  reply-sent: "<prefix><green>Ta reponse sur le ticket #<id> a ete envoyee.</green>"
+  ticket-not-found: "<prefix><red>Ce ticket est introuvable.</red>"
+  ticket-not-owned: "<prefix><red>Ce ticket ne t'appartient pas.</red>"
+  ticket-not-active: "<prefix><red>Ce ticket est ferme ou archive.</red>"
+  ticket-busy: "<prefix><red>Ce ticket est deja pris en charge par un autre staff.</red>"
+  ticket-archive-invalid: "<prefix><red>Seuls les tickets fermes peuvent etre archives.</red>"
 
 alerts:
   triggered: "<prefix><red>Alerte <white><type></white>:</red> <gray><details></gray>"

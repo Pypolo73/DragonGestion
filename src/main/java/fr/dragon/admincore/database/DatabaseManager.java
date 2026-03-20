@@ -240,6 +240,7 @@ public final class DatabaseManager {
             alterIgnore(statement, "CREATE INDEX IF NOT EXISTS idx_staff_actions_staff_name ON staff_actions (name_staff)");
             alterIgnore(statement, "CREATE INDEX IF NOT EXISTS idx_tickets_status_timestamp ON tickets (statut, timestamp DESC)");
             alterIgnore(statement, "CREATE INDEX IF NOT EXISTS idx_tickets_target_name ON tickets (name_cible)");
+            alterIgnore(statement, "CREATE INDEX IF NOT EXISTS idx_tickets_reporter_time ON tickets (uuid_reporter, timestamp DESC)");
             alterIgnore(statement, "CREATE INDEX IF NOT EXISTS idx_ticket_messages_ticket_time ON ticket_messages (ticket_id, timestamp DESC)");
             alterIgnore(statement, "CREATE INDEX IF NOT EXISTS idx_alerts_target_type_time ON alerts (uuid_cible, type, timestamp DESC)");
             alterIgnore(statement, "CREATE INDEX IF NOT EXISTS idx_sessions_target_join ON sessions (uuid, timestamp_join DESC)");

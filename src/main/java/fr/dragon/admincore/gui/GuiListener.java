@@ -4,8 +4,6 @@ import fr.dragon.admincore.core.AdminCorePlugin;
 import fr.dragon.admincore.database.PlayerProfile;
 import fr.dragon.admincore.chat.ChatHistoryEntry;
 import fr.dragon.admincore.dialog.PlayerSearchDialog;
-import fr.dragon.admincore.dialog.TicketCloseDialog;
-import fr.dragon.admincore.dialog.TicketConversationDialog;
 import fr.dragon.admincore.lookup.LookupMenus;
 import fr.dragon.admincore.lookup.SessionSummary;
 import fr.dragon.admincore.reports.TicketRecord;
@@ -366,7 +364,7 @@ public final class GuiListener implements Listener {
                             "reports.assigned",
                             this.plugin.getMessageFormatter().text("id", Long.toString(updated.id()))
                         ));
-                        openTicketConversation(player, updated);
+                        this.plugin.getTicketDialogService().openStaffConversation(player, updated);
                     })
                 ).exceptionally(throwable -> {
                     sync(() -> player.sendMessage(this.plugin.getMessageFormatter().message("errors.database")));
@@ -374,7 +372,7 @@ public final class GuiListener implements Listener {
                 });
                 return;
             }
-            openTicketConversation(player, ticket);
+            this.plugin.getTicketDialogService().openStaffConversation(player, ticket);
             return;
         }
         if (click.isRightClick()) {
@@ -471,80 +469,16 @@ public final class GuiListener implements Listener {
     }
 
     private void openTicketCloseFlow(final Player player, final TicketRecord ticket, final int returnPage) {
-        if (this.plugin.getDialogSupportService().supportsDialogs(player)) {
-            player.showDialog(TicketCloseDialog.create(ticket.targetName(), (response, audience) -> {
-                final String note = response.getText("note");
-                closeTicket(player, ticket, note, returnPage);
-            }, (response, audience) -> nextTick(() ->
-                this.plugin.getReportService().openPage(returnPage).thenAccept(page -> nextTick(() -> TicketMenu.openOpen(player, page)))
-            )));
-            return;
-        }
-        this.plugin.getChatPromptService().start(player, new fr.dragon.admincore.dialog.ChatPromptService.Session() {
-            @Override
-            public void open(final Player actor) {
-                actor.sendMessage(plugin.getMessageFormatter().message("reports.close-prompt"));
-            }
-
-            @Override
-            public boolean handle(final Player actor, final String input) {
-                closeTicket(actor, ticket, input, returnPage);
-                return false;
-            }
-        });
-    }
-
-    private void closeTicket(final Player player, final TicketRecord ticket, final String note, final int returnPage) {
-        this.plugin.getReportService().close(player, ticket.id(), note).thenAccept(updated ->
-            sync(() -> {
-                player.sendMessage(this.plugin.getMessageFormatter().message(
-                    "reports.closed",
-                    this.plugin.getMessageFormatter().text("id", Long.toString(updated.id()))
-                ));
-                this.plugin.getReportService().openPage(returnPage).thenAccept(page ->
-                    nextTick(() -> TicketMenu.openOpen(player, page))
-                );
-            })
-        ).exceptionally(throwable -> {
-            sync(() -> player.sendMessage(this.plugin.getMessageFormatter().message("errors.database")));
-            return null;
-        });
-    }
-
-    private void openTicketConversation(final Player player, final TicketRecord ticket) {
-        this.plugin.getReportService().messages(ticket.id(), 8).thenAccept(messages ->
-            nextTick(() -> player.showDialog(TicketConversationDialog.create(
-                ticket,
-                messages,
-                (response, audience) -> {
-                    final String message = response.getText("message");
-                    this.plugin.getReportService().sendMessage(player, ticket, message).thenRun(() ->
-                        nextTick(() -> openTicketConversation(player, ticket))
-                    ).exceptionally(throwable -> {
-                        sync(() -> {
-                            player.sendMessage(ticketMessageError(throwable));
-                            openTicketConversation(player, ticket);
-                        });
-                        return null;
-                    });
-                },
-                (response, audience) -> {
-                }
-            )))
-        ).exceptionally(throwable -> {
-            sync(() -> player.sendMessage(this.plugin.getMessageFormatter().message("errors.database")));
-            return null;
-        });
-    }
-
-    private net.kyori.adventure.text.Component ticketMessageError(final Throwable throwable) {
-        if (throwable instanceof java.util.concurrent.CompletionException completion && completion.getCause() != null) {
-            return ticketMessageError(completion.getCause());
-        }
-        if (throwable instanceof IllegalArgumentException) {
-            return this.plugin.getMessageFormatter().message("reports.message-empty");
-        }
-        return this.plugin.getMessageFormatter().message("errors.database");
+        this.plugin.getTicketDialogService().openCloseDialog(
+            player,
+            ticket,
+            () -> this.plugin.getReportService().openPage(returnPage).thenAccept(page ->
+                nextTick(() -> TicketMenu.openOpen(player, page))
+            ),
+            () -> this.plugin.getReportService().openPage(returnPage).thenAccept(page ->
+                nextTick(() -> TicketMenu.openOpen(player, page))
+            )
+        );
     }
 
     private void handleLookupOverviewClick(final Player player, final LookupMenus.OverviewHolder holder, final int slot) {
