@@ -38,11 +38,12 @@ public final class LuckPermsUiService {
 
     private static final int PLUGINS_PER_PAGE = 10;
     private static final int PERMISSIONS_PER_PAGE = 12;
-    private static final int PRIMARY_BUTTON_WIDTH = 210;
-    private static final int STATUS_BUTTON_WIDTH = 70;
+    private static final int FULL_ROW_BUTTON_WIDTH = 560;
+    private static final int PRIMARY_BUTTON_WIDTH = 420;
+    private static final int STATUS_BUTTON_WIDTH = 140;
+    private static final int PAGE_BUTTON_WIDTH = 280;
     private static final int ACTION_BUTTON_WIDTH = 140;
     private static final int DIALOG_COLUMNS = 4;
-    private static final int ROW_PADDING_BUTTONS = 2;
 
     private final AdminCorePlugin plugin;
     private final Map<UUID, LuckPermsDialogSession> sessions = new java.util.concurrent.ConcurrentHashMap<>();
@@ -114,18 +115,16 @@ public final class LuckPermsUiService {
         }
         final int to = Math.min(plugins.size(), from + PLUGINS_PER_PAGE);
         final List<ActionButton> actions = new ArrayList<>();
-        actions.add(navButton("Revenir", () -> openGroupSelection(player)));
-        addTrailingRowPadding(actions, DIALOG_COLUMNS - 1);
+        actions.add(fullRowButton("Revenir", () -> openGroupSelection(player)));
         for (final PluginPermissions pluginPermissions : plugins.subList(from, to)) {
-            actions.add(primaryRowButton(pluginPermissions.name(), () -> openPermissionLevel(player, groupName, pluginPermissions.name(), "", 0)));
-            actions.add(statusRowButton(statusLabel(groupStatus(group, pluginPermissions.permissions())), () -> openPlugins(player, groupName, page)));
-            addTrailingRowPadding(actions, ROW_PADDING_BUTTONS);
+            final Runnable openPlugin = () -> openPermissionLevel(player, groupName, pluginPermissions.name(), "", 0);
+            actions.add(primaryRowButton(pluginPermissions.name(), openPlugin));
+            actions.add(statusRowButton(pluginToggleLabel(group, pluginPermissions.permissions()), openPlugin));
         }
         addPageButtons(actions,
             page > 0 ? () -> openPlugins(player, groupName, page - 1) : null,
             to < plugins.size() ? () -> openPlugins(player, groupName, page + 1) : null
         );
-        addSpacerRow(actions);
         addSessionButtons(player, groupName, actions, () -> openPlugins(player, groupName, page));
         player.showDialog(DialogHelper.create(
             Component.text("UiLuckPerm — " + groupName),
@@ -160,8 +159,7 @@ public final class LuckPermsUiService {
         }
         final int to = Math.min(entries.size(), from + PERMISSIONS_PER_PAGE);
         final List<ActionButton> actions = new ArrayList<>();
-        actions.add(navButton("Revenir", () -> openPlugins(player, groupName, 0)));
-        addTrailingRowPadding(actions, DIALOG_COLUMNS - 1);
+        actions.add(fullRowButton("Revenir", () -> openPlugins(player, groupName, 0)));
         for (final NodeEntry entry : entries.subList(from, to)) {
             actions.add(primaryRowButton(entry.displayNode(), () -> {
                 if (entry.hasChildren()) {
@@ -174,13 +172,11 @@ public final class LuckPermsUiService {
                 }
                 togglePermission(player, groupName, entry.exactNode(), pluginName, path, page);
             }));
-            addTrailingRowPadding(actions, ROW_PADDING_BUTTONS);
         }
         addPageButtons(actions,
             page > 0 ? () -> openPermissionLevel(player, groupName, pluginName, path, page - 1) : null,
             to < entries.size() ? () -> openPermissionLevel(player, groupName, pluginName, path, page + 1) : null
         );
-        addSpacerRow(actions);
         addSessionButtons(player, groupName, actions, () -> openPermissionLevel(player, groupName, pluginName, path, page));
         player.showDialog(DialogHelper.create(
             Component.text("UiLuckPerm — " + groupName),
@@ -321,31 +317,17 @@ public final class LuckPermsUiService {
         return group.getCachedData().getPermissionData().checkPermission(node).asBoolean();
     }
 
-    private String groupStatus(final Group group, final Collection<String> permissions) {
-        boolean anyTrue = false;
-        boolean anyFalse = false;
+    private boolean pluginHasAnyGrant(final Group group, final Collection<String> permissions) {
         for (final String permission : permissions) {
             if (currentValue(group, permission)) {
-                anyTrue = true;
-            } else {
-                anyFalse = true;
-            }
-            if (anyTrue && anyFalse) {
-                return "Partiel";
+                return true;
             }
         }
-        if (anyTrue) {
-            return "Accorde";
-        }
-        return "Refuse";
+        return false;
     }
 
-    private String statusLabel(final String value) {
-        return switch (value) {
-            case "Accorde" -> "Accorde";
-            case "Partiel" -> "Partiel";
-            default -> "Refuse";
-        };
+    private String pluginToggleLabel(final Group group, final Collection<String> permissions) {
+        return pluginHasAnyGrant(group, permissions) ? "TRUE" : "FALSE";
     }
 
     private String permissionLabel(final Group group, final NodeEntry entry) {
@@ -409,8 +391,8 @@ public final class LuckPermsUiService {
         );
     }
 
-    private ActionButton navButton(final String label, final Runnable runnable) {
-        return actionButton(label, PRIMARY_BUTTON_WIDTH, runnable);
+    private ActionButton fullRowButton(final String label, final Runnable runnable) {
+        return actionButton(label, FULL_ROW_BUTTON_WIDTH, runnable);
     }
 
     private ActionButton primaryRowButton(final String label, final Runnable runnable) {
@@ -437,38 +419,20 @@ public final class LuckPermsUiService {
         );
     }
 
-    private void addSpacerRow(final List<ActionButton> actions) {
-        for (int index = 0; index < DIALOG_COLUMNS; index++) {
-            actions.add(spacerButton());
-        }
-    }
-
     private void addPageButtons(final List<ActionButton> actions, final Runnable previous, final Runnable next) {
         if (previous == null && next == null) {
             return;
         }
+        if (previous != null && next != null) {
+            actions.add(actionButton("Page precedente", PAGE_BUTTON_WIDTH, previous));
+            actions.add(actionButton("Page suivante", PAGE_BUTTON_WIDTH, next));
+            return;
+        }
         if (previous != null) {
-            actions.add(navButton("Page precedente", previous));
-        } else {
-            actions.add(spacerButton());
+            actions.add(fullRowButton("Page precedente", previous));
+            return;
         }
-        if (next != null) {
-            actions.add(navButton("Page suivante", next));
-        } else {
-            actions.add(spacerButton());
-        }
-        addTrailingRowPadding(actions, ROW_PADDING_BUTTONS);
-    }
-
-    private void addTrailingRowPadding(final List<ActionButton> actions, final int count) {
-        for (int index = 0; index < count; index++) {
-            actions.add(spacerButton());
-        }
-    }
-
-    private ActionButton spacerButton() {
-        return actionButton(Component.text(" "), 1, () -> {
-        });
+        actions.add(fullRowButton("Page suivante", next));
     }
 
     private Void handleLuckPermsFailure(final Player player, final Throwable throwable) {

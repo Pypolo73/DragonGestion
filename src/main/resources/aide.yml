@@ -5,17 +5,17 @@
 plugin:
   nom: "AdminCore"
   version: "Consulter plugin.yml ou le nom du jar"
-  resume: "Plugin staff Paper 1.21.8 pour la moderation, le staffmode, le chat, les sanctions et la gestion d'inventaire."
+  resume: "Plugin staff Paper 1.21.8 pour la moderation, le staffmode, le chat, les tickets, les lookups et la gestion d'inventaire."
 
 fichiers:
-  config.yml: "Configuration principale du plugin: sanctions, staff, chat, base de donnees, etc."
+  config.yml: "Configuration principale: sanctions, chat, alerts, dialogs, reseau, staff, voice chat et autres reglages."
   messages.yml: "Messages MiniMessage affiches en jeu."
-  inventorybackup.yml: "Affichage et comportement du module inventory backup."
+  inventorybackup.yml: "Infos d'affichage pour le module inventory backup."
   aide.yml: "Ce fichier d'aide."
 
 modules:
   sanctions:
-    description: "Module de moderation principal."
+    description: "Module principal de moderation."
     commandes:
       - "/ban <joueur> [raison]"
       - "/tempban <joueur> [duree] [raison]"
@@ -27,16 +27,45 @@ modules:
       - "/unmute <joueur>"
       - "/warnings <joueur>"
       - "/clearwarns <joueur>"
+      - "/ipban <joueur|ip>"
     fonctionnement:
       - "Les sanctions peuvent utiliser des raisons et durees predefinies."
-      - "Les tempbans et tempmutes utilisent des durees du style 30m, 1h, 1d, 1mo."
-      - "Les confirmations peuvent afficher l'auteur de la sanction de plusieurs manieres."
-      - "Le ban screen est configurable dans config.yml."
-      - "Selon la config, ban/tempban peuvent aussi lier l'IP."
-      - "Selon la config, mute/tempmute peuvent aussi se synchroniser avec le voice chat."
+      - "Les durees temporaires utilisent des formats comme 30m, 1h, 7d, 1mo."
+      - "Les confirmations peuvent choisir comment afficher l'auteur: decision staff, non precise, ou nom du moderateur."
+      - "Selon la config, ban et tempban peuvent aussi lier l'IP."
+      - "Selon la config, mute et tempmute peuvent aussi se synchroniser avec le voice chat."
+      - "Le message de ban et l'ecran de kick sont configurables dans config.yml."
+
+  reports_et_tickets:
+    description: "Signalements joueurs et suivi des tickets."
+    commandes_joueurs:
+      - "/report <joueur>"
+      - "/ticket list"
+      - "/ticket reply <id>"
+    commandes_staff:
+      - "/staffticket list"
+      - "/staffticket view <id>"
+      - "/staffticket assign <id>"
+      - "/staffticket close <id>"
+      - "/staffticket archive <id>"
+      - "/staffticket history <joueur>"
+      - "/tickets ... (alias de /staffticket)"
+    fonctionnement:
+      - "La commande /report ouvre un flow en 3 etapes: pseudo Discord, categorie, description."
+      - "Le joueur signale peut etre en ligne ou hors ligne, a condition qu'il soit deja connu du serveur."
+      - "Les categories de report sont configurables dans config.yml."
+      - "A la creation d'un ticket, les staffs avec la permission adequate recoivent une actionbar et un son."
+      - "Les tickets utilisent les statuts OPEN, IN_PROGRESS, CLOSED et ARCHIVED."
+      - "Le clic gauche staff sur un ticket ouvert l'assigne et ouvre la discussion."
+      - "Le clic droit staff ouvre la cloture avec note."
+      - "Shift clic droit sur un ticket ferme permet l'archivage."
+      - "Le joueur reporter et le joueur cible peuvent consulter et repondre au ticket si celui-ci est encore actif."
+      - "Quand le staff envoie un message, le joueur recoit un bouton [Repondre] cliquable."
+      - "Quand un joueur concerne par un ticket actif se reconnecte, il recoit une notification immediate pour le reconsulter."
+      - "Si possible, il faut privilegier Discord pour une meilleure facilite de traitement."
 
   staff:
-    description: "Gestion des membres du staff et des validations."
+    description: "Gestion des membres staff et des validations."
     commandes:
       - "/staff add"
       - "/staff remove"
@@ -45,9 +74,9 @@ modules:
       - "/staff approve <id>"
       - "/staff deny <id>"
     fonctionnement:
-      - "Le systeme gere des roles internes comme guide, moderator et admin."
+      - "Le systeme gere des roles staff internes et des demandes a valider."
       - "Certaines sanctions de grande ampleur peuvent demander une validation."
-      - "Les permissions staff et validations se reglent dans config.yml."
+      - "Les regles de validation et de hierarchie se reglent dans config.yml."
 
   staffmode:
     description: "Mode outils staff separe de l'inventaire normal."
@@ -59,16 +88,21 @@ modules:
       - "/vanish [joueur]"
     outils:
       - "Selection staff"
+      - "Boussole de teleportation discrete"
       - "Freeze"
       - "Vanish"
-      - "Mode spectateur staff"
+      - "Observation staff"
       - "Historique joueur"
       - "Messages joueur"
       - "Monter sur la tete"
+      - "Moniteur serveur"
+      - "Teleportation rapide sur un joueur en vanish si necessaire"
     fonctionnement:
       - "Le mode staff sauvegarde puis restaure l'inventaire normal du joueur."
       - "Les items du staffmode servent a moderer rapidement en jeu."
       - "Le vanish masque le joueur aux personnes sans permission de vision vanish."
+      - "Le moniteur serveur affiche TPS, RAM et chunks charges en actionbar."
+      - "Les teleportations staff discretes sont logguees."
 
   gui_admincore:
     description: "Interface principale du plugin."
@@ -78,10 +112,12 @@ modules:
       - "Historique joueur"
       - "Recherche de profils"
       - "Sanctions recentes"
-      - "Acces rapide aux validations en attente"
+      - "Tickets"
+      - "Acces rapide a plusieurs menus staff"
     fonctionnement:
       - "Permet d'ouvrir differents menus de moderation."
-      - "La recherche joueur peut proposer des profils et ouvrir des historiques."
+      - "L'onglet Tickets affiche les tickets ouverts et en cours."
+      - "Des vues separees existent pour les tickets fermes et les archives."
 
   inventory:
     description: "Visualisation, modification et backups des inventaires."
@@ -96,7 +132,7 @@ modules:
       - "Le mode Modifier permet de deplacer, retirer et ajouter des items."
       - "Le bouton Shuffle melange l'inventaire normal."
       - "Le bouton Clear vide le conteneur apres confirmation."
-      - "Le bouton Backups ouvre maintenant le GUI natif d'AxInventoryRestore."
+      - "Le bouton Backups ouvre le GUI natif d'AxInventoryRestore."
       - "La creation de backup manuel passe par AxInventoryRestore."
     permissions:
       - "admincore.inventory.view"
@@ -129,9 +165,39 @@ modules:
       - "/note <joueur> <texte>"
       - "/notes <joueur>"
     fonctionnement:
-      - "Lookup peut afficher l'IP, le client et le nombre de sanctions."
+      - "Lookup ouvre un GUI avec resume joueur, historique et sessions."
+      - "Le panneau principal peut afficher le temps de jeu cumule et le nombre total de sessions."
+      - "Les sessions stockent IP, pseudo, serveur source, heure de connexion et deconnexion."
+      - "Lookup peut aussi afficher l'IP, le client et le nombre de sanctions."
       - "Les notes staff sont stockees en base."
       - "L'historique liste les sanctions d'un joueur."
+
+  alerts:
+    description: "Alertes automatiques staff."
+    fonctionnement:
+      - "Surveille les warns recents, le nombre de comptes sur une meme IP et le nombre de connexions dans une fenetre de temps."
+      - "Les seuils sont definis dans config.yml."
+      - "Les alerts sont envoyees aux staffs avec son et message."
+
+  stafflogs:
+    description: "Journal des actions staff."
+    commande: "/stafflogs [staff]"
+    fonctionnement:
+      - "Affiche les actions staff en GUI pagine."
+      - "Peut filtrer sur un membre staff."
+      - "Les actions comme sanctions, tickets, vanish, teleportations et editions LuckPerms sont logguees."
+
+  luckperms:
+    description: "Interface staff de navigation et edition LuckPerms."
+    commandes:
+      - "/staffluckperm"
+      - "/stafflp"
+    fonctionnement:
+      - "Ouvre un flow Dialog pour choisir un groupe puis naviguer plugin par plugin."
+      - "Chaque permission affiche un bouton de navigation a gauche et un bouton TRUE/FALSE a droite."
+      - "Le bouton TRUE/FALSE bascule immediatement la valeur puis recharge la vue."
+      - "Les actions disposent d'un undo, redo, save et cancel."
+      - "Les modifications LuckPerms sont logguees dans staff_actions."
 
   vpn:
     description: "Verification VPN simple."
@@ -147,11 +213,12 @@ base_de_donnees:
   fonctionnement:
     - "Les requetes passent par HikariCP."
     - "Le schema est cree automatiquement au demarrage."
-    - "Les donnees staff, sanctions, notes et joueurs sont persistantes."
+    - "Les requetes lourdes sont executees en async."
+    - "Les donnees joueurs, sanctions, tickets, messages ticket, sessions, notes, alerts et logs staff sont persistantes."
 
 softdepends:
-  AxInventoryRestore: "Utilise pour les backups et leur GUI natif."
-  LuckPerms: "Utilise pour certains affichages et integrations facultatives."
+  AxInventoryRestore: "Utilise pour les backups d'inventaire et leur GUI natif."
+  LuckPerms: "Utilise pour l'interface staff de gestion des permissions."
 
 permissions_importantes:
   - "admincore.*"
@@ -160,6 +227,10 @@ permissions_importantes:
   - "admincore.freeze"
   - "admincore.lookup"
   - "admincore.history"
+  - "admincore.reports"
+  - "admincore.staffticket"
+  - "admincore.stafflogs"
+  - "admincore.staffluckperm"
   - "admincore.inventory.view"
   - "admincore.inventory.edit"
   - "admincore.inventory.backup"
@@ -168,3 +239,4 @@ notes:
   - "Les dialogs Paper peuvent etre desactives ou contournes selon la marque du client."
   - "Le plugin sauvegarde certains fichiers par defaut au premier demarrage."
   - "Certaines integrations sont optionnelles et dependent d'autres plugins presents sur le serveur."
+  - "Si un pseudo n'a jamais ete vu par le serveur, certaines recherches offline peuvent ne pas le retrouver."
