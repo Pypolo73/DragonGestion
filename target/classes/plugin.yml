@@ -223,6 +223,14 @@ commands:
     description: Menu de teleportation (alias)
     usage: /teleportation
     aliases: [tp]
+  fly:
+    description: Activer/desactiver le mode fly
+    usage: /fly [joueur]
+    permission: admincore.fly
+  flyspeed:
+    description: Regler la vitesse de vol
+    usage: /flyspeed [joueur] [1-10]
+    permission: admincore.flyspeed
 
 permissions:
   admincore.*:
@@ -265,6 +273,8 @@ permissions:
       admincore.inventory.edit: true
       admincore.inventory.backup: true
       admincore.stafflogs: true
+      admincore.fly: true
+      admincore.flyspeed: true
       admincore.admin: true
       admincore.chat.bypass: true
       admincore.freeze.bypass: true
@@ -387,3 +397,7 @@ permissions:
     default: false
   admincore.teleport.homes.unlimited:
     default: false
+  admincore.fly:
+    default: op
+  admincore.flyspeed:
+    default: op
