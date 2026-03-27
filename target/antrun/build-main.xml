@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project name="maven-antrun-" default="main">
-  <target name="main">
-    <echo message="Creating versioned JAR" />
-    <mkdir dir="C:\Users\AZ\Documents\Plugin\1.21.8\DragonGestion/versions" />
-  </target>
-</project>
