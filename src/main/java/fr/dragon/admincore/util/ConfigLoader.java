@@ -13,6 +13,7 @@ public final class ConfigLoader {
     private final JavaPlugin plugin;
     private FileConfiguration messages;
     private FileConfiguration inventoryBackup;
+    private FileConfiguration chatConfig;
 
     public ConfigLoader(final JavaPlugin plugin) {
         this.plugin = plugin;
@@ -20,9 +21,16 @@ public final class ConfigLoader {
 
     public void reload() {
         this.plugin.saveDefaultConfig();
+        
+        File chatFile = new File(this.plugin.getDataFolder(), "chat/chat.yml");
+        if (!chatFile.exists()) {
+            this.plugin.saveResource("chat/chat.yml", false);
+        }
+        
         this.plugin.reloadConfig();
         this.messages = loadConfiguration("messages.yml");
         this.inventoryBackup = loadConfiguration("inventorybackup.yml");
+        this.chatConfig = loadConfiguration("chat/chat.yml");
     }
 
     public FileConfiguration config() {
@@ -35,6 +43,10 @@ public final class ConfigLoader {
 
     public FileConfiguration inventoryBackup() {
         return this.inventoryBackup;
+    }
+
+    public FileConfiguration chatConfig() {
+        return this.chatConfig;
     }
 
     private FileConfiguration loadConfiguration(final String fileName) {

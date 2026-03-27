@@ -29,6 +29,9 @@ import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.persistence.PersistentDataType;
@@ -199,6 +202,26 @@ public final class StaffModeListener implements Listener {
     public void onPickup(final EntityPickupItemEvent event) {
         if (event.getEntity() instanceof Player player && this.plugin.getStaffModeService().isInStaffMode(player.getUniqueId())) {
             event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onBlockBreak(final BlockBreakEvent event) {
+        if (!this.plugin.getStaffModeService().isInStaffMode(event.getPlayer().getUniqueId())) {
+            return;
+        }
+        if (this.plugin.getStaffModeService().isObservationMode(event.getPlayer().getUniqueId())) {
+            event.setCancelled(false);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onBlockPlace(final BlockPlaceEvent event) {
+        if (!this.plugin.getStaffModeService().isInStaffMode(event.getPlayer().getUniqueId())) {
+            return;
+        }
+        if (this.plugin.getStaffModeService().isObservationMode(event.getPlayer().getUniqueId())) {
+            event.setCancelled(false);
         }
     }
 

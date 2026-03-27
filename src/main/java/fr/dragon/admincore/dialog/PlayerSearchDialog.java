@@ -8,27 +8,45 @@ import io.papermc.paper.registry.data.dialog.input.DialogInput;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
 import java.util.List;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 public final class PlayerSearchDialog {
 
     private PlayerSearchDialog() {
     }
 
-    public static Dialog create(final String title, final String initialValue, final DialogActionCallback callback) {
+    public static Dialog create(final DialogActionCallback callback, final Runnable backCallback) {
+        return create("Rechercher un joueur", "", callback, backCallback);
+    }
+
+    public static Dialog create(final String title, final String initialValue, final DialogActionCallback callback, final Runnable backCallback) {
+        final var buttons = List.of(
+            DialogHelper.button(
+                Component.text("Rechercher").color(NamedTextColor.GREEN),
+                140,
+                DialogAction.customClick(callback, DialogHelper.singleUseOptions())
+            ),
+            DialogHelper.button(
+                Component.text("Retour")
+                    .color(NamedTextColor.GRAY),
+                100,
+                DialogAction.customClick((response, audience) -> backCallback.run(), DialogHelper.singleUseOptions())
+            )
+        );
+        
         return DialogHelper.create(
-            Component.text(title),
-            List.of(DialogBody.plainMessage(Component.text("Ecris le pseudo a rechercher."), 240)),
-            List.of(DialogInput.text("query", Component.text("Pseudo"))
-                .width(240)
+            Component.text(title).color(NamedTextColor.AQUA),
+            List.of(
+                DialogBody.plainMessage(Component.text("Entre le nom du joueur a rechercher.").color(NamedTextColor.WHITE), 320),
+                DialogBody.plainMessage(Component.text("Tu peux entrer un nom partiel.").color(NamedTextColor.GRAY), 320)
+            ),
+            List.of(DialogInput.text("player", Component.text("Nom du joueur"))
+                .width(260)
                 .labelVisible(true)
                 .initial(initialValue)
-                .maxLength(16)
+                .maxLength(32)
                 .build()),
-            DialogType.notice(DialogHelper.button(
-                Component.text("Rechercher"),
-                160,
-                DialogAction.customClick(callback, DialogHelper.singleUseOptions())
-            ))
+            DialogType.multiAction(buttons, null, 1)
         );
     }
 }

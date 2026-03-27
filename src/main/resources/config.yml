@@ -4,6 +4,10 @@
 general:
   server-name: "paper-1"
 
+teleportation:
+  # Activer le module de teleportation (homes, warps, spawn, rtp, tpa, back)
+  enabled: true
+
 network:
   server_name: "paper-1"
 
@@ -169,12 +173,23 @@ staff:
     sync-mute: true
 
 vpn-check:
-  enabled: false
+  enabled: true
+  auto-on-join: true
+  kick-on-vpn: false
+  notify-staff: true
   timeout-seconds: 5
   # {ip} will be replaced at runtime.
-  url-template: "https://example.com/check?ip={ip}"
+  url-template: "https://ip-api.com/json/{ip}?fields=proxy,isp,as,query"
   # A simple string check on the response body.
   true-match: "\"proxy\":true"
+  # Message staff notification
+  staff-notify-message: "<red>[VPN]</red> <gold>{player}</gold> <gray>a rejoint avec un VPN/Proxy (<white>{ip}</white>)"
+
+geoip:
+  enabled: true
+  timeout-seconds: 5
+  # API URL for geolocation (free: ip-api.com)
+  api-url: "https://ip-api.com/json/{ip}?fields=status,country,region,city,isp,as,query"
 
 alerts:
   warns_threshold: 3

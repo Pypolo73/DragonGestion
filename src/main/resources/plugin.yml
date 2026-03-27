@@ -1,5 +1,5 @@
 name: AdminCore
-version: @dragon.plugin.version@
+version: 1.1.54
 main: fr.dragon.admincore.core.AdminCorePlugin
 api-version: "1.21"
 author: OpenAI
@@ -143,6 +143,11 @@ commands:
     description: Verifier un VPN
     usage: /checkvpn <joueur|ip>
     permission: admincore.checkvpn
+  network:
+    description: Commandes reseau et securite
+    usage: /network <info|geo|reload>
+    aliases: [net]
+    permission: admincore.network
   admincore:
     description: Administration plugin
     usage: /admincore <reload|debug|db export|pending|approve|deny>
@@ -150,7 +155,74 @@ commands:
   inventory:
     description: Voir ou modifier l'inventaire d'un joueur
     usage: /inventory <joueur>
+    aliases: [inv, inventaire]
     permission: admincore.inventory.view
+  sethome:
+    description: Creer un home
+    usage: /sethome [nom]
+  home:
+    description: Se teleporter a un home
+    usage: /home [nom]
+  delhome:
+    description: Supprimer un home
+    usage: /delhome <nom>
+  listhomes:
+    description: Liste vos homes
+    usage: /listhomes
+    aliases: [homes]
+  setwarp:
+    description: Creer un warp
+    usage: /setwarp <nom> [description]
+    permission: admincore.teleport.warp.create
+  warp:
+    description: Se teleporter a un warp
+    usage: /warp [nom]
+  delwarp:
+    description: Supprimer un warp
+    usage: /delwarp <nom>
+    permission: admincore.teleport.warp.delete
+  listwarps:
+    description: Liste les warps
+    usage: /listwarps
+    aliases: [warps]
+  spawn:
+    description: Se teleporter au spawn
+    usage: /spawn
+  setspawn:
+    description: Definir le spawn
+    usage: /setspawn
+    permission: admincore.teleport.spawn.set
+  rtp:
+    description: Teleportation aleatoire
+    usage: /rtp
+    permission: admincore.teleport.rtp
+  tpa:
+    description: Demander a se teleporter vers un joueur
+    usage: /tpa <joueur>
+  tpahere:
+    description: Demander a un joueur de se teleporter sur vous
+    usage: /tpahere <joueur>
+  tpaccept:
+    description: Accepter une requete de teleportation
+    usage: /tpaccept [joueur]
+  tpdeny:
+    description: Refuser une requete de teleportation
+    usage: /tpdeny [joueur]
+  tpignore:
+    description: Ignorer/Accepter les requetes
+    usage: /tpignore
+  back:
+    description: Retour a la position precedente
+    usage: /back
+  teleportation:
+    description: Menu de teleportation
+    usage: /teleportation
+    aliases: [teleport]
+    permission: admincore.teleportation
+  teleport:
+    description: Menu de teleportation (alias)
+    usage: /teleportation
+    aliases: [tp]
 
 permissions:
   admincore.*:
@@ -185,6 +257,7 @@ permissions:
       admincore.notes: true
       admincore.ipban: true
       admincore.checkvpn: true
+      admincore.network: true
       admincore.alerts: true
       admincore.reports: true
       admincore.staffticket: true
@@ -254,6 +327,8 @@ permissions:
     default: op
   admincore.checkvpn:
     default: op
+  admincore.network:
+    default: op
   admincore.alerts:
     default: op
   admincore.reports:
@@ -280,3 +355,35 @@ permissions:
     default: false
   admincore.vanish.see:
     default: op
+  admincore.teleport.home.create:
+    default: true
+  admincore.teleport.home.use:
+    default: true
+  admincore.teleport.home.delete:
+    default: true
+  admincore.teleport.warp.create:
+    default: op
+  admincore.teleport.warp.use:
+    default: true
+  admincore.teleport.warp.delete:
+    default: op
+  admincore.teleport.spawn.use:
+    default: true
+  admincore.teleport.spawn.set:
+    default: op
+  admincore.teleport.rtp:
+    default: true
+  admincore.teleport.rtp.other:
+    default: op
+  admincore.teleport.tpa.send:
+    default: true
+  admincore.teleport.tpa.receive:
+    default: true
+  admincore.teleport.tpa.bypass:
+    default: op
+  admincore.teleport.back:
+    default: true
+  admincore.teleport.homes.bonus:
+    default: false
+  admincore.teleport.homes.unlimited:
+    default: false

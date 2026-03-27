@@ -90,16 +90,24 @@ public final class TicketDialogService {
     }
 
     public void openPlayerTickets(final Player player, final int page) {
+        openPlayerTickets(player, page, () -> {
+            final var reportCmd = new ReportCommand(this.plugin);
+            reportCmd.onCommand(player, null, "report", new String[]{});
+        });
+    }
+
+    public void openPlayerTickets(final Player player, final int page, final Runnable createCallback) {
         this.plugin.getReportService().reporterPage(player.getUniqueId(), Math.max(0, page), PLAYER_PAGE_SIZE).thenAccept(result ->
             sync(() -> player.showDialog(PlayerTicketsDialog.create(
                 result.entries(),
                 result.page(),
                 result.hasNext(),
                 ticket -> openPlayerReply(player, ticket),
-                () -> openPlayerTickets(player, Math.max(0, result.page() - 1)),
-                () -> openPlayerTickets(player, result.page() + 1),
+                () -> openPlayerTickets(player, Math.max(0, result.page() - 1), createCallback),
+                () -> openPlayerTickets(player, result.page() + 1, createCallback),
                 () -> {
-                }
+                },
+                createCallback
             )))
         ).exceptionally(throwable -> {
             sync(() -> player.sendMessage(this.plugin.getMessageFormatter().message("errors.database")));

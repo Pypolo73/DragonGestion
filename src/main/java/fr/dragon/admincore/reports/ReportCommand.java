@@ -1,9 +1,11 @@
 package fr.dragon.admincore.reports;
 
 import fr.dragon.admincore.core.AdminCorePlugin;
+import fr.dragon.admincore.dialog.PlayerPickerDialog;
 import fr.dragon.admincore.dialog.ReportCategoryDialog;
 import fr.dragon.admincore.dialog.ReportDescriptionDialog;
 import fr.dragon.admincore.dialog.ReportDiscordDialog;
+import fr.dragon.admincore.dialog.ReportTypeDialog;
 import fr.dragon.admincore.database.PlayerProfile;
 import java.util.List;
 import java.util.Locale;
@@ -34,45 +36,56 @@ public final class ReportCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(this.plugin.getMessageFormatter().message("errors.player-only"));
             return true;
         }
-        if (args.length < 1) {
-            sender.sendMessage(this.plugin.getMessageFormatter().deserialize("<prefix><red>Usage: /report <joueur></red>"));
-            return true;
-        }
-        resolveTarget(args[0]).thenAccept(target ->
-            this.plugin.getServer().getScheduler().runTask(this.plugin, () -> {
-                if (target == null) {
-                    reporter.sendMessage(this.plugin.getMessageFormatter().message("errors.no-player-found"));
-                    return;
-                }
-                openDiscordStep(reporter, target);
-            })
-        ).exceptionally(throwable -> {
-            this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
-                reporter.sendMessage(this.plugin.getMessageFormatter().message("errors.database"))
-            );
-            return null;
-        });
+        openReportTypeStep(reporter);
         return true;
     }
 
-    private void openDiscordStep(final Player reporter, final ReportTarget target) {
-        reporter.showDialog(ReportDiscordDialog.create(target.name(), (response, audience) -> {
-            final String discord = response.getText("discord");
-            openCategoryStep(reporter, target, discord == null ? "" : discord.trim());
-        }));
+    private void openReportTypeStep(final Player reporter) {
+        reporter.showDialog(ReportTypeDialog.create(
+            () -> openPlayerPickerStep(reporter),
+            () -> openBugReportStep(reporter)
+        ));
     }
 
-    private void openCategoryStep(final Player reporter, final ReportTarget target, final String discord) {
-        final List<String> categories = reportCategories();
-        reporter.showDialog(ReportCategoryDialog.create(categories, (response, audience) -> {
+    private void openPlayerPickerStep(final Player reporter) {
+        this.plugin.getDialogSupportService().openPlayerPicker(reporter, "Signaler un joueur", target -> {
+            final ReportTarget reportTarget = new ReportTarget(target.getUniqueId(), target.getName());
+            openCategoryStep(reporter, reportTarget, "", false);
+        });
+    }
+
+    private void openBugReportStep(final Player reporter) {
+        final UUID bugUuid = UUID.randomUUID();
+        final String bugName = "BUG_" + System.currentTimeMillis();
+        openCategoryStep(reporter, new ReportTarget(bugUuid, bugName), "", true);
+    }
+
+    private void openCategoryStep(final Player reporter, final ReportTarget target, final String discord, final boolean isBugReport) {
+        final List<String> categories = isBugReport ? bugCategories() : reportCategories();
+        reporter.showDialog(ReportCategoryDialog.createWithCancel(categories, (response, audience) -> {
             final String category = response.getText("categorie");
             final String effectiveCategory = (category == null || category.isBlank()) ? categories.getFirst() : category.trim();
-            openDescriptionStep(reporter, target, discord, effectiveCategory);
-        }));
+            openDiscordStep(reporter, target, effectiveCategory, isBugReport);
+        }, () -> openReportTypeStep(reporter)));
     }
 
-    private void openDescriptionStep(final Player reporter, final ReportTarget target, final String discord, final String category) {
-        reporter.showDialog(ReportDescriptionDialog.create((response, audience) -> {
+    private void openDiscordStep(final Player reporter, final ReportTarget target, final String category, final boolean isBugReport) {
+        reporter.showDialog(ReportDiscordDialog.createWithCancel(target.name(), 
+            (response, audience) -> {
+                final String discord = response.getText("discord");
+                openDescriptionStep(reporter, target, discord == null ? "" : discord.trim(), category, isBugReport);
+            },
+            () -> openDescriptionStep(reporter, target, "", category, isBugReport),
+            () -> openCategoryStep(reporter, target, "", isBugReport)
+        ));
+    }
+
+    private void openDescriptionStep(final Player reporter, final ReportTarget target, final String discord, final String category, final boolean isBugReport) {
+        final String title = target.name().startsWith("BUG_") ? "Signaler un bug" : "Signaler " + target.name();
+        final String placeholder = target.name().startsWith("BUG_") 
+            ? "Decris le bug en detail (ce qui se passe, ce qui devrait se passer, etc.)"
+            : "Decris les faits";
+        reporter.showDialog(ReportDescriptionDialog.createWithCancel(title, placeholder, (response, audience) -> {
             final String description = response.getText("description");
             this.plugin.getReportService().create(reporter, target.uuid(), target.name(), discord, category, description).thenAccept(ticket ->
                 this.plugin.getServer().getScheduler().runTask(this.plugin, () ->
@@ -88,7 +101,7 @@ public final class ReportCommand implements CommandExecutor, TabCompleter {
                 );
                 return null;
             });
-        }));
+        }, () -> openDiscordStep(reporter, target, category, isBugReport)));
     }
 
     private List<String> reportCategories() {
@@ -107,19 +120,20 @@ public final class ReportCommand implements CommandExecutor, TabCompleter {
         );
     }
 
-    private CompletableFuture<ReportTarget> resolveTarget(final String rawName) {
-        final Player online = Bukkit.getPlayerExact(rawName);
-        if (online != null) {
-            return CompletableFuture.completedFuture(new ReportTarget(online.getUniqueId(), online.getName()));
+    private List<String> bugCategories() {
+        final List<String> configured = this.plugin.getConfigLoader().config().getStringList("reports.bug-categories").stream()
+            .filter(entry -> entry != null && !entry.isBlank())
+            .toList();
+        if (!configured.isEmpty()) {
+            return configured;
         }
-        return this.plugin.getSanctionService().playerProfile(null, rawName).thenApply(profile -> toReportTarget(rawName, profile));
-    }
-
-    private ReportTarget toReportTarget(final String rawName, final PlayerProfile profile) {
-        if (profile == null || profile.uuid() == null || profile.name() == null || !profile.name().equalsIgnoreCase(rawName)) {
-            return null;
-        }
-        return new ReportTarget(profile.uuid(), profile.name());
+        return List.of(
+            "Bug de gameplay",
+            "Bug de lag / performance",
+            "Bug d'affichage",
+            "Probleme de connexion",
+            "Autre bug"
+        );
     }
 
     private record ReportTarget(UUID uuid, String name) {

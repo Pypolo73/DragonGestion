@@ -19,6 +19,18 @@ import fr.dragon.admincore.inventory.InventoryManagerService;
 import fr.dragon.admincore.lookup.LookupService;
 import fr.dragon.admincore.lookup.SessionRepository;
 import fr.dragon.admincore.lookup.SessionTrackingListener;
+import fr.dragon.admincore.movement.FlyCommand;
+import fr.dragon.admincore.network.NetworkCommand;
+import fr.dragon.admincore.geo.GeoIPService;
+import fr.dragon.admincore.dialog.NetworkDialog;
+import fr.dragon.admincore.teleportation.TeleportCommands;
+import fr.dragon.admincore.teleportation.TeleportConfig;
+import fr.dragon.admincore.teleportation.TeleportConfigLoader;
+import fr.dragon.admincore.teleportation.TeleportDatabase;
+import fr.dragon.admincore.teleportation.TeleportDialogs;
+import fr.dragon.admincore.teleportation.TeleportListener;
+import fr.dragon.admincore.teleportation.TeleportService;
+import fr.dragon.admincore.dialog.TeleportDialog;
 import fr.dragon.admincore.reports.ReportCommand;
 import fr.dragon.admincore.reports.ReportService;
 import fr.dragon.admincore.reports.StaffTicketCommand;
@@ -68,7 +80,14 @@ public final class AdminCorePlugin extends JavaPlugin {
     private TicketDialogService ticketDialogService;
     private AlertManager alertManager;
     private LookupService lookupService;
+    private GeoIPService geoIPService;
     private BukkitTask runtimeRefreshTask;
+    
+    private TeleportConfigLoader teleportConfigLoader;
+    private TeleportDatabase teleportDatabase;
+    private TeleportService teleportService;
+    private TeleportDialog teleportDialog;
+    private boolean teleportationEnabled = false;
 
     @Override
     public void onEnable() {
@@ -103,8 +122,11 @@ public final class AdminCorePlugin extends JavaPlugin {
         this.ticketDialogService = new TicketDialogService(this);
         this.alertManager = new AlertManager(this, alertRepository, sanctionRepository, playerRepository);
         this.lookupService = new LookupService(this, sessionRepository);
+        this.geoIPService = new GeoIPService(this, this.configLoader);
 
         AdminCoreAPI.bind(this, this.sanctionService, this.vanishService, this.staffModeService, this.chatService, this.playerSessionManager);
+
+        initTeleportation();
 
         registerCommands();
         registerListeners();
@@ -262,6 +284,35 @@ public final class AdminCorePlugin extends JavaPlugin {
         bind("report", reportCommand);
         bind("ticket", ticketCommand);
         bind("staffticket", staffTicketCommand);
+        
+        final FlyCommand flyCommand = new FlyCommand();
+        bind("fly", flyCommand);
+        bind("flyspeed", flyCommand);
+        
+        final NetworkCommand networkCommand = new NetworkCommand(this, this.geoIPService);
+        networkCommand.setNetworkDialog(new NetworkDialog(this.geoIPService));
+        bind("network", networkCommand);
+        bind("net", networkCommand);
+    }
+
+    private void initTeleportation() {
+        teleportationEnabled = configLoader.config().getBoolean("teleportation.enabled", true);
+        if (!teleportationEnabled) {
+            getLogger().info("Module de teleportation desactive.");
+            return;
+        }
+        
+        try {
+            this.teleportConfigLoader = new TeleportConfigLoader(this);
+            this.teleportConfigLoader.load();
+            this.teleportDatabase = new TeleportDatabase(this);
+            this.teleportDatabase.load();
+            this.teleportService = new TeleportService(this, teleportDatabase, teleportConfigLoader.getConfig());
+            getLogger().info("Module de teleportation active.");
+        } catch (Exception e) {
+            getLogger().severe("Erreur lors de l'initialisation du module teleportation: " + e.getMessage());
+            teleportationEnabled = false;
+        }
     }
 
     private void registerListeners() {

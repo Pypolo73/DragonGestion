@@ -1,0 +1,107 @@
+# Configuration du module Teleportation
+# Ce module inclut homes, warps, spawn, RTP et teleportation requests
+
+death-positions:
+  # Nombre maximum de positions de mort a retenir par joueur
+  max-saved: 10
+  # Activer l'enregistrement des morts
+  enabled: true
+
+home:
+  # Nombre maximum de homes par joueur (modifiable par permission)
+  max-homes: 3
+  # Delai de teleportation (en secondes, 0 pour desactiver)
+  warmup: 3
+  # Cooldown entre les teleportations (en secondes)
+  cooldown: 0
+  # Nom par defaut pour /sethome (si aucun nom fourni)
+  default-name: "home"
+
+warp:
+  # Nombre maximum de warps publics
+  max-warps: 50
+  # Delai de teleportation (en secondes, 0 pour desactiver)
+  warmup: 3
+  # Cooldown entre les teleportations (en secondes)
+  cooldown: 0
+
+spawn:
+  # Delai de teleportation (en secondes, 0 pour desactiver)
+  warmup: 3
+  # Le spawn est-il aussi le point de respawn par defaut?
+  set-as-default-spawn: true
+  # Teleporter les nouveaux joueurs au spawn?
+  teleport-new-players: true
+
+rtp:
+  # Activer la teleportation aleatoire
+  enabled: true
+  # Nombre maximum de tentatives pour trouver une position valide
+  max-attempts: 50
+  # Distance minimale du joueur
+  min-distance: 100
+  # Distance maximale du joueur
+  max-distance: 5000
+  # Hauteur minimale (Y)
+  min-height: 60
+  # Worlds ou RTP est autorise
+  allowed-worlds:
+    - "world"
+    - "world_nether"
+    - "world_the_end"
+  # Worlds ou RTP est interdit
+  restricted-worlds: []
+  # Cooldown (en secondes)
+  cooldown: 60
+  # Delai de teleportation (en secondes)
+  warmup: 5
+
+tpa:
+  # Delai d'expiration des requetes (en secondes)
+  request-timeout: 120
+  # Delai de teleportation (en secondes, 0 pour desactiver)
+  warmup: 3
+  # Activer l'ignorement des requetes
+  allow-ignore: true
+
+back:
+  # Activer la commande /back
+  enabled: true
+  # Sauvegarder la position apres une mort?
+  save-on-death: true
+  # Sauvegarder la position apres une teleportation?
+  save-on-teleport: true
+  # Worlds ou /back ne peut pas fonctionner
+  restricted-worlds: []
+
+economy:
+  # Activer les couts economy (necessite Vault)
+  enabled: false
+  costs:
+    home: 0
+    warp: 0
+    spawn: 0
+    rtp: 0
+    tpa: 0
+    back: 0
+
+database:
+  # Type de base de donnees pour les donnees de teleportation
+  # sqlite ou mysql
+  type: sqlite
+  # Si type: mysql
+  mysql:
+    host: localhost
+    port: 3306
+    database: admincore_teleport
+    username: root
+    password: change-me
+  # Fichier SQLite (dans le dossier teleportation)
+  sqlite:
+    file: teleportation.db
+
+messages:
+  # Prefix pour tous les messages
+  prefix: "<gradient:#00fb9a:#00d4ff>[Teleportation]</gradient> "
+  # Fichier des messages (dans le dossier teleportation)
+  file: "message.yml"

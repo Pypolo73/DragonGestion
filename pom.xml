@@ -23,6 +23,7 @@
         <hikari.version>5.1.0</hikari.version>
         <sqlite.version>3.49.1.0</sqlite.version>
         <mysql.version>8.4.0</mysql.version>
+
     </properties>
 
     <repositories>
@@ -34,6 +35,7 @@
             <id>staffplusplus</id>
             <url>https://nexus.staffplusplus.org/repository/staffplusplus/</url>
         </repository>
+
         <repository>
             <id>central</id>
             <url>https://repo.maven.apache.org/maven2</url>
@@ -53,6 +55,7 @@
             <version>${staffplusplus.api.version}</version>
             <scope>provided</scope>
         </dependency>
+
         <!-- HikariCP is used directly by DatabaseManager and is not provided by Paper. -->
         <dependency>
             <groupId>com.zaxxer</groupId>
@@ -91,6 +94,9 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.5.0</version>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
                 <executions>
                     <execution>
                         <id>prepare-dragon-version</id>
@@ -112,20 +118,9 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>properties-maven-plugin</artifactId>
                 <version>1.2.1</version>
-                <executions>
-                    <execution>
-                        <id>load-dragon-version-properties</id>
-                        <phase>prepare-package</phase>
-                        <goals>
-                            <goal>read-project-properties</goal>
-                        </goals>
-                        <configuration>
-                            <files>
-                                <file>${project.build.directory}/build-version.properties</file>
-                            </files>
-                        </configuration>
-                    </execution>
-                </executions>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -177,6 +172,9 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>3.6.0</version>
+                <configuration>
+                    <finalName>${project.build.finalName}</finalName>
+                </configuration>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -248,11 +246,8 @@
                         </goals>
                         <configuration>
                             <target>
-                                <mkdir dir="${dragon.output.dir}" />
-                                <copy file="${project.build.directory}/${project.build.finalName}.jar"
-                                      tofile="${dragon.output.file}"
-                                      overwrite="true" />
-                                <delete file="${project.build.directory}/original-${project.build.finalName}.jar" quiet="true" />
+                                <echo message="Creating versioned JAR"/>
+                                <mkdir dir="${project.basedir}/versions"/>
                             </target>
                         </configuration>
                     </execution>

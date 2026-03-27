@@ -8,6 +8,7 @@ import io.papermc.paper.registry.data.dialog.body.DialogBody;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
 import java.util.List;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 public final class SanctionConfirmDialog {
 
@@ -22,12 +23,12 @@ public final class SanctionConfirmDialog {
         final DialogActionCallback backCallback
     ) {
         final List<ActionButton> actions = List.of(
-            DialogHelper.button(Component.text("Confirmer"), 140, DialogAction.customClick(confirmCallback, DialogHelper.singleUseOptions())),
-            DialogHelper.button(Component.text("Choisir affichage"), 180, DialogAction.customClick(actorChoiceCallback, DialogHelper.singleUseOptions())),
-            DialogHelper.button(Component.text("Retour"), 120, DialogAction.customClick(backCallback, DialogHelper.singleUseOptions()))
+            DialogHelper.button(Component.text("Confirmer").color(NamedTextColor.GREEN), 140, DialogAction.customClick(confirmCallback, DialogHelper.singleUseOptions())),
+            DialogHelper.button(Component.text("Choisir affichage").color(NamedTextColor.YELLOW), 180, DialogAction.customClick(actorChoiceCallback, DialogHelper.singleUseOptions())),
+            DialogHelper.button(Component.text("Retour").color(NamedTextColor.GRAY), 120, DialogAction.customClick(backCallback, DialogHelper.singleUseOptions()))
         );
         return DialogHelper.create(
-            Component.text(title),
+            Component.text(title).color(NamedTextColor.RED),
             body.stream().map(component -> DialogBody.plainMessage(component, 260)).toList(),
             List.of(),
             DialogType.multiAction(actions, null, 3)

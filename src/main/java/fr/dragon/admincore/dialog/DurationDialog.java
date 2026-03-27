@@ -8,6 +8,7 @@ import io.papermc.paper.registry.data.dialog.input.DialogInput;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
 import java.util.List;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 
 public final class DurationDialog {
@@ -22,8 +23,8 @@ public final class DurationDialog {
         final DialogActionCallback cancelCallback
     ) {
         return DialogHelper.create(
-            Component.text(title),
-            List.of(DialogBody.plainMessage(Component.text("Saisis une duree libre. Exemples: 30m, 1h, 3d, 1mo."), 280)),
+            Component.text(title).color(NamedTextColor.AQUA),
+            List.of(DialogBody.plainMessage(Component.text("Saisis une duree libre. Exemples: 30m, 1h, 3d, 1mo.").color(NamedTextColor.WHITE), 280)),
             List.of(
                 DialogInput.text("duration", Component.text("Duree"))
                     .width(240)

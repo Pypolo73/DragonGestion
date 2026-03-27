@@ -38,4 +38,6 @@ public interface ChatService {
     List<ChatHistoryEntry> recentMessagesByAuthor(String author, int limit);
 
     boolean removeRecentMessage(ChatHistoryEntry entry);
+
+    void clearChatHistory();
 }

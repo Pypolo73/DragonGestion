@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.entity.Player;
 
 public final class PlayerPickerDialog {
@@ -21,14 +22,14 @@ public final class PlayerPickerDialog {
         final List<ActionButton> actions = new ArrayList<>();
         for (final Player player : players) {
             actions.add(DialogHelper.button(
-                Component.text(player.getName()),
-                60,
+                Component.text(player.getName()).color(NamedTextColor.YELLOW),
+                80,
                 DialogAction.customClick((response, audience) -> callback.accept(player), DialogHelper.singleUseOptions())
             ));
         }
         return DialogHelper.create(
-            Component.text(title),
-            List.of(DialogBody.plainMessage(Component.text("Selectionne un joueur en ligne."), 170)),
+            Component.text(title).color(NamedTextColor.AQUA),
+            List.of(DialogBody.plainMessage(Component.text("Selectionne un joueur en ligne.").color(NamedTextColor.WHITE), 170)),
             List.of(),
             DialogType.multiAction(actions, null, 3)
         );

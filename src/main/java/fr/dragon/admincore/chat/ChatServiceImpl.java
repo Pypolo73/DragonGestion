@@ -96,11 +96,15 @@ public final class ChatServiceImpl implements ChatService {
         for (final Player onlinePlayer : Bukkit.getOnlinePlayers()) {
             clearView(onlinePlayer, lines, selection.visibleReason());
         }
+        if (selection.publicMessages()) {
+            clearChatHistory();
+        }
     }
 
     @Override
     public void clearChatFor(final Player target, final String reason) {
         clearView(target, Math.max(25, this.configLoader.config().getInt("chat.clear-lines", 120)), reason);
+        this.recentMessages.removeIf(entry -> entry.author().equalsIgnoreCase(target.getName()));
     }
 
     @Override
@@ -172,6 +176,11 @@ public final class ChatServiceImpl implements ChatService {
     @Override
     public boolean removeRecentMessage(final ChatHistoryEntry entry) {
         return this.recentMessages.remove(entry);
+    }
+
+    @Override
+    public void clearChatHistory() {
+        this.recentMessages.clear();
     }
 
     private void clearView(final Player target, final int lines, final String reason) {

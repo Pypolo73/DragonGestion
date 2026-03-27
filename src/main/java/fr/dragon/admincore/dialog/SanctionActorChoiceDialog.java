@@ -8,6 +8,7 @@ import io.papermc.paper.registry.data.dialog.body.DialogBody;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
 import java.util.List;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 public final class SanctionActorChoiceDialog {
 
@@ -23,14 +24,14 @@ public final class SanctionActorChoiceDialog {
         final DialogActionCallback backCallback
     ) {
         final List<ActionButton> actions = List.of(
-            DialogHelper.button(Component.text("Decision staff"), 160, DialogAction.customClick(decisionCallback, DialogHelper.singleUseOptions())),
-            DialogHelper.button(Component.text("Non precise"), 150, DialogAction.customClick(unspecifiedCallback, DialogHelper.singleUseOptions())),
-            DialogHelper.button(Component.text(moderatorName), 160, DialogAction.customClick(moderatorCallback, DialogHelper.singleUseOptions())),
-            DialogHelper.button(Component.text("Retour"), 120, DialogAction.customClick(backCallback, DialogHelper.singleUseOptions()))
+            DialogHelper.button(Component.text("Decision staff").color(NamedTextColor.AQUA), 160, DialogAction.customClick(decisionCallback, DialogHelper.singleUseOptions())),
+            DialogHelper.button(Component.text("Non precise").color(NamedTextColor.GRAY), 150, DialogAction.customClick(unspecifiedCallback, DialogHelper.singleUseOptions())),
+            DialogHelper.button(Component.text(moderatorName).color(NamedTextColor.GREEN), 160, DialogAction.customClick(moderatorCallback, DialogHelper.singleUseOptions())),
+            DialogHelper.button(Component.text("Retour").color(NamedTextColor.RED), 120, DialogAction.customClick(backCallback, DialogHelper.singleUseOptions()))
         );
         return DialogHelper.create(
-            Component.text(title),
-            List.of(DialogBody.plainMessage(Component.text("Choisis le texte affiche pour le staff."), 260)),
+            Component.text(title).color(NamedTextColor.GOLD),
+            List.of(DialogBody.plainMessage(Component.text("Choisis le texte qui sera affiche pour le staff.").color(NamedTextColor.WHITE), 260)),
             List.of(),
             DialogType.multiAction(actions, null, 2)
         );

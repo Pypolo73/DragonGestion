@@ -5,7 +5,10 @@ import fr.dragon.admincore.core.PermissionService;
 import fr.dragon.admincore.core.StaffAssignmentResult;
 import fr.dragon.admincore.core.StaffActionType;
 import fr.dragon.admincore.core.StaffRole;
+import fr.dragon.admincore.dialog.PlayerSearchDialog;
 import fr.dragon.admincore.dialog.StaffAssignmentDialog;
+import fr.dragon.admincore.dialog.StaffDashboardDialog;
+import fr.dragon.admincore.dialog.StaffStatsDialog;
 import java.util.List;
 import java.util.Locale;
 import org.bukkit.Bukkit;
@@ -44,11 +47,13 @@ public final class StaffCommand implements CommandExecutor, TabCompleter {
     }
 
     private boolean staffRoot(final CommandSender sender, final String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(this.plugin.getMessageFormatter().message("errors.player-only"));
+            return true;
+        }
         if (args.length == 0) {
-            if (sender instanceof Player player
-                && this.plugin.getStaffAccessService().canManageAssignments(sender)
-                && this.plugin.getDialogSupportService().supportsDialogs(player)) {
-                openAssignmentDialog(player);
+            if (this.plugin.getDialogSupportService().supportsDialogs(player)) {
+                openStaffDashboard(player);
                 return true;
             }
             sender.sendMessage("/staff <add|remove|list|pending|approve|deny>");
@@ -66,6 +71,45 @@ public final class StaffCommand implements CommandExecutor, TabCompleter {
                 yield true;
             }
         };
+    }
+
+    private void openStaffDashboard(final Player player) {
+        final StaffRole role = this.plugin.getStaffAccessService().roleOf(player);
+        player.showDialog(StaffDashboardDialog.create(
+            role,
+            () -> openStats(player),
+            () -> openInventorySearch(player),
+            () -> openSanctions(player),
+            () -> openPlayerLookup(player)
+        ));
+    }
+
+    private void openStats(final Player player) {
+        player.showDialog(StaffStatsDialog.create(() -> openStaffDashboard(player)));
+    }
+
+    private void openInventorySearch(final Player player) {
+        this.plugin.getDialogSupportService().openPlayerPicker(player, "Voir inventaire", target -> {
+            target.openInventory(target.getInventory());
+        });
+    }
+
+    private void openSanctions(final Player player) {
+        this.plugin.getDialogSupportService().openPlayerPicker(player, "Sanctionner", target -> {
+            this.plugin.getServer().getScheduler().runTaskLater(this.plugin, () -> player.chat("/sanction " + target.getName()), 1L);
+        });
+    }
+
+    private void openPlayerLookup(final Player player) {
+        player.showDialog(PlayerSearchDialog.create(
+            (response, audience) -> {
+                final String playerName = response.getText("player");
+                if (playerName != null && !playerName.isBlank()) {
+                    player.chat("/lookup " + playerName.trim());
+                }
+            },
+            () -> openStaffDashboard(player)
+        ));
     }
 
     private boolean toggleStaffMode(final CommandSender sender) {

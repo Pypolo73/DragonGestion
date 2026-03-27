@@ -153,7 +153,11 @@ public final class GuiListener implements Listener {
         }
         player.closeInventory();
         player.showDialog(PlayerSearchDialog.create("Recherche pseudo", "", (response, audience) -> {
-            final String input = response.getText("query") == null ? "" : response.getText("query").trim();
+            final String input = response.getText("player") == null ? "" : response.getText("player").trim();
+            if (input.isEmpty()) {
+                this.plugin.getServer().getScheduler().runTaskLater(this.plugin, () -> AdminCoreMenus.openSearchMode(player), 1L);
+                return;
+            }
             this.plugin.getSanctionService().searchPlayerNames(input, 45).thenAccept(results ->
                 CompletableFuture.allOf(results.stream().map(name ->
                     this.plugin.getSanctionService()
@@ -175,7 +179,7 @@ public final class GuiListener implements Listener {
                     nextTick(() -> AdminCoreMenus.openSearchResults(player, input, entries));
                 }))
             );
-        }));
+        }, () -> AdminCoreMenus.openSearchMode(player)));
     }
 
     private void handleSearchResultClick(final Player player, final AdminCoreMenuContext.SearchResultsHolder holder, final int slot) {

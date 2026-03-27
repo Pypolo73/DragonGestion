@@ -22,14 +22,14 @@ public final class StaffAssignmentDialog {
         final DialogActionCallback cancelCallback
     ) {
         final List<ActionButton> actions = List.of(
-            DialogHelper.button(Component.text("Guide"), 120, DialogAction.customClick(guideCallback, DialogHelper.singleUseOptions())),
-            DialogHelper.button(Component.text("Modo"), 120, DialogAction.customClick(moderatorCallback, DialogHelper.singleUseOptions())),
-            DialogHelper.button(Component.text("Admin"), 120, DialogAction.customClick(adminCallback, DialogHelper.singleUseOptions())),
-            DialogHelper.button(Component.text("Annuler"), 120, DialogAction.customClick(cancelCallback, DialogHelper.singleUseOptions()))
+            DialogHelper.button(Component.text("Guide").color(net.kyori.adventure.text.format.NamedTextColor.GREEN), 120, DialogAction.customClick(guideCallback, DialogHelper.singleUseOptions())),
+            DialogHelper.button(Component.text("Moderateur").color(net.kyori.adventure.text.format.NamedTextColor.BLUE), 120, DialogAction.customClick(moderatorCallback, DialogHelper.singleUseOptions())),
+            DialogHelper.button(Component.text("Administrateur").color(net.kyori.adventure.text.format.NamedTextColor.RED), 120, DialogAction.customClick(adminCallback, DialogHelper.singleUseOptions())),
+            DialogHelper.button(Component.text("Annuler").color(net.kyori.adventure.text.format.NamedTextColor.GRAY), 120, DialogAction.customClick(cancelCallback, DialogHelper.singleUseOptions()))
         );
         return DialogHelper.create(
-            Component.text("Ajouter au staff"),
-            List.of(DialogBody.plainMessage(Component.text("Entre le pseudo, puis choisis le role a attribuer."), 280)),
+            Component.text("Ajouter au staff").color(net.kyori.adventure.text.format.NamedTextColor.AQUA),
+            List.of(DialogBody.plainMessage(Component.text("Entre le pseudo du joueur, puis selectionne le role a attribuer.").color(net.kyori.adventure.text.format.NamedTextColor.WHITE), 280)),
             List.of(DialogInput.text("player", Component.text("Pseudo"))
                 .width(240)
                 .labelVisible(true)

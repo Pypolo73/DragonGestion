@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
 
 public final class PlayerTicketsDialog {
 
@@ -29,6 +30,19 @@ public final class PlayerTicketsDialog {
         final Runnable previousCallback,
         final Runnable nextCallback,
         final Runnable closeCallback
+    ) {
+        return create(tickets, page, hasNext, openCallback, previousCallback, nextCallback, closeCallback, () -> {});
+    }
+
+    public static Dialog create(
+        final List<TicketRecord> tickets,
+        final int page,
+        final boolean hasNext,
+        final Consumer<TicketRecord> openCallback,
+        final Runnable previousCallback,
+        final Runnable nextCallback,
+        final Runnable closeCallback,
+        final Runnable createCallback
     ) {
         final List<ActionButton> actions = new ArrayList<>();
         for (final TicketRecord ticket : tickets) {
@@ -65,6 +79,12 @@ public final class PlayerTicketsDialog {
                 DialogAction.customClick((response, audience) -> nextCallback.run(), DialogHelper.singleUseOptions())
             ));
         }
+        actions.add(DialogHelper.button(
+            Component.text("+ Creer un ticket")
+                .color(TextColor.color(0x2ecc71)),
+            180,
+            DialogAction.customClick((response, audience) -> createCallback.run(), DialogHelper.singleUseOptions())
+        ));
         actions.add(DialogHelper.button(
             Component.text("Fermer"),
             150,

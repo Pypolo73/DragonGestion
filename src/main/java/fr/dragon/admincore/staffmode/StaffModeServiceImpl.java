@@ -8,6 +8,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.GameMode;
 import org.bukkit.Bukkit;
@@ -24,7 +28,7 @@ import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.scheduler.BukkitTask;
 
-public final class StaffModeServiceImpl implements StaffModeService {
+public final class StaffModeServiceImpl implements StaffModeService, Listener {
 
     public static final NamespacedKey TOOL_KEY = new NamespacedKey("admincore", "staff_tool");
     private static final TextColor TITLE = TextColor.color(0xFFE45E);
@@ -39,6 +43,7 @@ public final class StaffModeServiceImpl implements StaffModeService {
     private final Set<UUID> spyPlayers = ConcurrentHashMap.newKeySet();
     private final Set<UUID> observationPlayers = ConcurrentHashMap.newKeySet();
     private final Map<UUID, BukkitTask> monitorTasks = new ConcurrentHashMap<>();
+    private final Set<UUID> hiddenFromAll = ConcurrentHashMap.newKeySet();
 
     public StaffModeServiceImpl(final Plugin plugin, final PlayerSessionManager sessionManager, final VanishService vanishService) {
         this.plugin = plugin;
@@ -76,13 +81,51 @@ public final class StaffModeServiceImpl implements StaffModeService {
             player.setGameMode(GameMode.ADVENTURE);
             player.setAllowFlight(true);
             player.setFlying(true);
+            player.setCollidable(true);
+            player.setGravity(true);
+            try {
+                player.setNoPhysics(false);
+            } catch (Exception ignored) {}
+            player.closeInventory();
+            showToAllPlayers(player);
             return false;
         }
         this.observationPlayers.add(player.getUniqueId());
-        player.setGameMode(GameMode.CREATIVE);
+        player.setGameMode(GameMode.SPECTATOR);
         player.setAllowFlight(true);
         player.setFlying(true);
+        player.setCollidable(false);
+        player.setGravity(false);
+        try {
+            player.setNoPhysics(true);
+        } catch (Exception ignored) {}
+        hideFromAllPlayers(player);
+        player.sendMessage(Component.text("[StaffMode] Mode Spectateur Creative active.", TextColor.color(0x00FF00)));
+        player.sendMessage(Component.text("  Inventaire: ", TextColor.color(0xFFD700))
+            .append(Component.text("Accessible via E ou /inventory", TextColor.color(0x00FF00))));
+        player.sendMessage(Component.text("  Blocs: ", TextColor.color(0xFFD700))
+            .append(Component.text("Clic gauche: casser | Clic droit: poser", TextColor.color(0x00FF00))));
+        player.sendMessage(Component.text("  Deplacements: ", TextColor.color(0xFFD700))
+            .append(Component.text("Vol + traverses les murs", TextColor.color(0x00FF00))));
         return true;
+    }
+    
+    private void hideFromAllPlayers(final Player staff) {
+        this.hiddenFromAll.add(staff.getUniqueId());
+        for (final Player online : Bukkit.getOnlinePlayers()) {
+            if (!online.equals(staff)) {
+                online.hidePlayer(this.plugin, staff);
+            }
+        }
+    }
+    
+    private void showToAllPlayers(final Player staff) {
+        this.hiddenFromAll.remove(staff.getUniqueId());
+        for (final Player online : Bukkit.getOnlinePlayers()) {
+            if (!online.equals(staff)) {
+                online.showPlayer(this.plugin, staff);
+            }
+        }
     }
 
     @Override
@@ -200,6 +243,7 @@ public final class StaffModeServiceImpl implements StaffModeService {
             return;
         }
         stopMonitor(player.getUniqueId());
+        final boolean wasHidden = this.hiddenFromAll.remove(player.getUniqueId());
         this.observationPlayers.remove(player.getUniqueId());
         player.closeInventory();
         final PlayerInventory inventory = player.getInventory();
@@ -209,6 +253,13 @@ public final class StaffModeServiceImpl implements StaffModeService {
         player.setGameMode(snapshot.gameMode());
         player.setAllowFlight(snapshot.allowFlight());
         player.setFlying(snapshot.flying());
+        player.setCollidable(true);
+        try {
+            player.setNoPhysics(false);
+        } catch (Exception ignored) {}
+        if (wasHidden) {
+            showToAllPlayers(player);
+        }
         if (!snapshot.wasVanished()) {
             this.vanishService.setVanished(player, false);
         }
@@ -262,5 +313,21 @@ public final class StaffModeServiceImpl implements StaffModeService {
             return TextColor.color(0xFFAF45);
         }
         return TextColor.color(0xFF6B6B);
+    }
+    
+    @EventHandler
+    public void onPlayerJoin(final PlayerJoinEvent event) {
+        final Player joining = event.getPlayer();
+        for (final UUID hiddenId : this.hiddenFromAll) {
+            final Player hidden = Bukkit.getPlayer(hiddenId);
+            if (hidden != null && !hidden.equals(joining)) {
+                joining.hidePlayer(this.plugin, hidden);
+            }
+        }
+    }
+    
+    @EventHandler
+    public void onPlayerQuit(final PlayerQuitEvent event) {
+        this.hiddenFromAll.remove(event.getPlayer().getUniqueId());
     }
 }
