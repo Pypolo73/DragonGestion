@@ -1,0 +1,429 @@
+# Fichier d'aide genere avec le plugin.
+# Il n'est pas lu par le code: il sert uniquement de documentation visible
+# dans le dossier AdminCore.
+
+plugin:
+  nom: "AdminCore"
+  version: "Consulter plugin.yml ou le nom du jar"
+  resume: "Plugin staff Paper 1.21.8 pour la moderation, le staffmode, le chat, les tickets, les lookups, la gestion d'inventaire et la teleportation."
+
+fichiers:
+  config.yml: "Configuration principale: sanctions, chat, alerts, dialogs, reseau, staff, voice chat, teleportation et autres reglages."
+  messages.yml: "Messages MiniMessage affiches en jeu."
+  inventorybackup.yml: "Infos d'affichage pour le module inventory backup."
+  admincore/chat/chat.yml: "Configuration des messages de connexion, grades et mini-jeux chat."
+  admincore/chat/animation.yml: "Configuration des recompenses et mots pour les mini-jeux."
+  admincore/teleportation/config.yml: "Configuration du module teleportation (homes, warps, spawn, rtp, tpa, back)."
+  admincore/teleportation/messages.yml: "Messages du module teleportation."
+  admincore/teleportation/teleportation.db: "Base de donnees SQLite pour les homes, warps, spawn et positions."
+  admincore/teleportation/logs/: "Dossier des logs de morts et teleportations."
+  admincore/GUI/: "Dossier pour les configurations de GUIs (DeluxeMenus/ItemAdder)."
+  aide.yml: "Ce fichier d'aide."
+
+bases_de_donnees:
+  database_principale:
+    description: "Database principale pour les donnees critiques"
+    fichier: "admincore.db (SQLite) ou configuration MySQL dans config.yml"
+    contenu:
+      - "Sanctions (bans, mutes, warns, kicks)"
+      - "Tickets et messages"
+      - "Sessions joueurs"
+      - "Notes staff"
+      - "Logs staff"
+      - "Alertes"
+  database_teleportation:
+    description: "Database separee pour la teleportation"
+    fichier: "admincore/teleportation/teleportation.db"
+    contenu:
+      - "Homes"
+      - "Warps"
+      - "Spawn"
+      - "Positions /back"
+
+modules:
+  sanctions:
+    description: "Module principal de moderation."
+    commandes:
+      - "/ban <joueur> [raison]"
+      - "/tempban <joueur> [duree] [raison]"
+      - "/mute <joueur> [raison]"
+      - "/tempmute <joueur> [duree] [raison]"
+      - "/kick <joueur> [raison]"
+      - "/warn <joueur> [raison]"
+      - "/unban <joueur>"
+      - "/unmute <joueur>"
+      - "/warnings <joueur>"
+      - "/clearwarns <joueur>"
+      - "/ipban <joueur|ip>"
+    fonctionnement:
+      - "Les sanctions peuvent utiliser des raisons et durees predefinies."
+      - "Les durees temporaires utilisent des formats comme 30m, 1h, 7d, 1mo."
+      - "Les confirmations peuvent choisir comment afficher l'auteur: decision staff, non precise, ou nom du moderateur."
+      - "Selon la config, ban et tempban peuvent aussi lier l'IP."
+      - "Selon la config, mute et tempmute peuvent aussi se synchroniser avec le voice chat."
+      - "Le message de ban et l'ecran de kick sont configurables dans config.yml."
+
+  reports_et_tickets:
+    description: "Signalements joueurs et suivi des tickets."
+    commandes_joueurs:
+      - "/report <joueur>"
+      - "/ticket list"
+      - "/ticket reply <id>"
+    commandes_staff:
+      - "/staffticket list"
+      - "/staffticket view <id>"
+      - "/staffticket assign <id>"
+      - "/staffticket close <id>"
+      - "/staffticket archive <id>"
+      - "/staffticket history <joueur>"
+      - "/tickets ... (alias de /staffticket)"
+    fonctionnement:
+      - "La commande /report ouvre un flow en 3 etapes: pseudo Discord, categorie, description."
+      - "Le joueur signale peut etre en ligne ou hors ligne, a condition qu'il soit deja connu du serveur."
+      - "Les categories de report sont configurables dans config.yml."
+      - "A la creation d'un ticket, les staffs avec la permission adequate recoivent une actionbar et un son."
+      - "Les tickets utilisent les statuts OPEN, IN_PROGRESS, CLOSED et ARCHIVED."
+      - "Le clic gauche staff sur un ticket ouvert l'assigne et ouvre la discussion."
+      - "Le clic droit staff ouvre la cloture avec note."
+      - "Shift clic droit sur un ticket ferme permet l'archivage."
+      - "Le joueur reporter et le joueur cible peuvent consulter et repondre au ticket si celui-ci est encore actif."
+      - "Quand le staff envoie un message, le joueur recoit un bouton [Repondre] cliquable."
+      - "Quand un joueur concerne par un ticket actif se reconnecte, il recoit une notification immediate pour le reconsulter."
+      - "Si possible, il faut privilegier Discord pour une meilleure facilite de traitement."
+
+  staff:
+    description: "Gestion des membres staff et des validations."
+    commandes:
+      - "/staff add"
+      - "/staff remove"
+      - "/staff list"
+      - "/staff pending"
+      - "/staff approve <id>"
+      - "/staff deny <id>"
+    fonctionnement:
+      - "Le systeme gere des roles staff internes et des demandes a valider."
+      - "Certaines sanctions de grande ampleur peuvent demander une validation."
+      - "Les regles de validation et de hierarchie se reglent dans config.yml."
+
+  staffmode:
+    description: "Mode outils staff separe de l'inventaire normal."
+    commande: "/staffmode"
+    commandes_connexes:
+      - "/freeze <joueur>"
+      - "/spy"
+      - "/stafflist"
+      - "/vanish [joueur]"
+    outils:
+      - "Selection staff"
+      - "Boussole de teleportation discrete"
+      - "Freeze"
+      - "Vanish"
+      - "Observation staff (spectateur creative)"
+      - "Monter sur la tete"
+      - "Historique joueur"
+      - "Messages joueur"
+      - "Moniteur serveur"
+      - "Teleportation rapide sur un joueur en vanish si necessaire"
+    fonctionnement:
+      - "Le mode staff sauvegarde puis restaure l'inventaire normal du joueur."
+      - "Les items du staffmode servent a moderer rapidement en jeu."
+      - "Le vanish masque le joueur aux personnes sans permission de vision vanish."
+      - "Le moniteur serveur affiche TPS, RAM et chunks charges en actionbar."
+      - "Les teleportations staff discretes sont logguees."
+
+  mode_spectateur_creative:
+    description: "Mode special staff permettant l'observation et l'edition du monde."
+    activation: "Clic sur l'outil 'Spectateur staff' (loupe) dans le staffmode."
+    caracteristiques:
+      - "Mode: SPECTATEUR avec deplacement libre"
+      - "Inventaire: Accessible (E ou /inventory) - tous les items disponibles"
+      - "Blocs: Casser (clic gauche) et poser (clic droit) comme en survie"
+      - "Vol: Active avec la touche Espace (double Espace pour redescendre)"
+      - "Traversee des murs: Activee - permet de passer a travers les blocs solides"
+      - "Gravite: Desactivee - vol libre dans toutes les directions"
+      - "Invisibilite: Le staff est invisible pour les autres joueurs"
+    fonctionnement:
+      - "Ce mode est ideal pour inspecter des constructions ou explorer sans etre vu."
+      - "Permet de modifier le terrain rapidement pour des tests ou corrections."
+      - "Le staff reste invisible meme en posant des blocs."
+    messages_affiches:
+      - "Confirmation de l'activation du mode avec instructions"
+      - "Inventaire accessible via E ou /inventory"
+      - "Instructions pour casser et poser des blocs"
+      - "Instructions pour le vol et la traversee des murs"
+
+  gui_admincore:
+    description: "Interface principale du plugin."
+    commande: "/admincore"
+    contenu:
+      - "Sanctions actives"
+      - "Historique joueur"
+      - "Recherche de profils"
+      - "Sanctions recentes"
+      - "Tickets"
+      - "Acces rapide a plusieurs menus staff"
+    fonctionnement:
+      - "Permet d'ouvrir differents menus de moderation."
+      - "L'onglet Tickets affiche les tickets ouverts et en cours."
+      - "Des vues separees existent pour les tickets fermes et les archives."
+
+  inventory:
+    description: "Visualisation, modification et backups des inventaires."
+    commande: "/inventory <joueur>"
+    modes:
+      - "Voir"
+      - "Modifier"
+      - "Creer un backup"
+    fonctionnement:
+      - "Le premier choix s'ouvre en dialog si le client supporte les dialogs Paper."
+      - "Le mode Voir ouvre un inventaire en lecture seule."
+      - "Le mode Modifier permet de deplacer, retirer et ajouter des items."
+      - "Le bouton Shuffle melange l'inventaire normal."
+      - "Le bouton Clear vide le conteneur apres confirmation."
+      - "Le bouton Backups ouvre le GUI natif d'AxInventoryRestore."
+      - "La creation de backup manuel passe par AxInventoryRestore."
+    permissions:
+      - "admincore.inventory.view"
+      - "admincore.inventory.edit"
+      - "admincore.inventory.backup"
+
+  teleportation:
+    description: "Module de teleportation complet (homes, warps, spawn, RTP, TPA, back, dernieres morts)."
+    status: "Module integre depuis HuskHomes, desactivable via config.yml."
+    activation: "config.yml -> teleportation: enabled: true/false"
+    dossiers:
+      - "admincore/teleportation/config.yml - Configuration du module"
+      - "admincore/teleportation/messages.yml - Messages personnalises"
+      - "admincore/teleportation/teleportation.db - Base de donnees SQLite"
+      - "admincore/teleportation/logs/ - Historique des morts et teleportations"
+    menu_dialog:
+      description: "Menu interactif avec dialogs Paper"
+      commande: "/teleportation"
+      contenu:
+        - "HOME - Gestion des homes (poser, liste, supprimer)"
+        - "WARP - Gestion des warps (creer, liste, supprimer)"
+        - "TPA - Envoyer une demande de teleportation"
+        - "RTP - Teleportation aleatoire"
+        - "DERNIERES MORTS - Voir les dernieres positions de mort"
+    commandes_homes:
+      - "/sethome [nom] - Creer un home"
+      - "/home [nom] - Se teleporter a un home (ouvre le dialog si sans argument)"
+      - "/delhome <nom> - Supprimer un home"
+      - "/listhomes - Liste de vos homes"
+    commandes_warps:
+      - "/setwarp <nom> [description] - Creer un warp (admin)"
+      - "/warp [nom] - Se teleporter a un warp (ouvre le dialog si sans argument)"
+      - "/delwarp <nom> - Supprimer un warp (admin)"
+      - "/listwarps - Liste des warps"
+    commandes_spawn:
+      - "/spawn - Se teleporter au spawn"
+      - "/setspawn - Definir la position du spawn (admin)"
+    commandes_rtp:
+      - "/rtp - Teleportation aleatoire"
+    commandes_tpa:
+      - "/tpa [joueur] - Demander a se teleporter vers un joueur (ouvre le dialog si sans argument)"
+      - "/tpahere <joueur> - Demander a un joueur de se teleporter sur vous"
+      - "/tpaccept - Accepter une requete de teleportation"
+      - "/tpdeny [joueur] - Refuser une requete de teleportation"
+      - "/tpignore - Ignorer/Accepter les requetes de teleportation"
+    commandes_back:
+      - "/back - Retour a la position precedente"
+    logs_morts:
+      description: "Enregistrement automatique des positions de mort"
+      dossier: "admincore/teleportation/logs/DATE.yml"
+      configuration: "admincore/teleportation/config.yml -> death-positions.max-saved"
+      fonctionnement:
+        - "Chaque mort est enregistree avec coordonnees et timestamp"
+        - "Les positions sont affichees dans /teleportation -> Dernieres Morts"
+        - "Nombre maximum configurable (defaut: 10)"
+    permissions_teleportation:
+      - "admincore.teleport.home.create - Creer des homes"
+      - "admincore.teleport.home.use - Utiliser les homes"
+      - "admincore.teleport.home.delete - Supprimer ses homes"
+      - "admincore.teleport.warp.create - Creer des warps (admin)"
+      - "admincore.teleport.warp.use - Utiliser les warps"
+      - "admincore.teleport.warp.delete - Supprimer les warps (admin)"
+      - "admincore.teleport.spawn.use - Utiliser /spawn"
+      - "admincore.teleport.spawn.set - Definir le spawn (admin)"
+      - "admincore.teleport.rtp - Utiliser /rtp"
+      - "admincore.teleport.rtp.other - Teleporter d'autres joueurs en RTP (admin)"
+      - "admincore.teleport.tpa.send - Envoyer des requetes TPA"
+      - "admincore.teleport.tpa.receive - Recevoir des requetes TPA"
+      - "admincore.teleport.back - Utiliser /back"
+      - "admincore.teleport.homes.bonus - +5 slots de homes bonus"
+      - "admincore.teleport.homes.unlimited - Slots de homes illimites"
+    fonctionnement:
+      - "Les homes sont lies a un joueur et stockes dans teleportation.db."
+      - "Les warps sont globaux et accessibles a tous (avec permissions)."
+      - "Le spawn peut etre defini et utilise comme point de respawn."
+      - "Le /rtp trouve une position aleatoire securisee (hors blocs dangereux)."
+      - "Les requetes TPA expirent apres un delai configure."
+      - "Le /back sauvegarde la position avant les teleportations et la mort."
+      - "Des delais de teleportation (warmup) sont configurables."
+      - "Les couts economy sont desactivables (necessite Vault)."
+      - "Les positions de mort sont sauvegardees automatiquement."
+
+  chat:
+    description: "Regulation et moderation du chat."
+    commandes:
+      - "/chat clear"
+      - "/chat clear player <joueur>"
+      - "/chat clear messages"
+      - "/slowmode <secondes|off>"
+      - "/chatlock"
+      - "/muteall"
+      - "/broadcast <message>"
+    fonctionnement:
+      - "Peut bloquer les mots interdits."
+      - "Peut imposer un delai entre deux messages."
+      - "Peut bloquer le spam du meme message."
+      - "Peut garder un historique recent des messages."
+      - "Le nombre de messages affiches dans les menus est configurable."
+
+  chat_mini_jeux:
+    description: "Mini-jeux interactifs dans le chat (mots caches et mathematiques)."
+    fichiers:
+      - "admincore/chat/chat.yml - Configuration principale des jeux"
+      - "admincore/chat/animation.yml - Configuration des recompenses et mots"
+    activation: "chat.yml -> chat-games: enabled: true"
+    recompenses:
+      description: "Systeme de recompenses flexible"
+      format:
+        - "Chaque recompense a un nom unique"
+        - "name: type (xp, money, item, command)"
+        - "amount: quantite"
+        - "command: commande a executer (pour item/command)"
+      exemple:
+        xp_default:
+          name: "xp"
+          amount: 100
+          command: ""
+        diamond_reward:
+          name: "item"
+          amount: 1
+          command: "give {player} diamond 1"
+    jeux:
+      mots:
+        description: "Un mot est cache (ex: C-h-a-r-b-o-n), le joueur doit deviner"
+        modes: "HYPHEN (C-h-a-r-b-o-n), STAR (C******), MIX"
+      mathematiques:
+        description: "Une operation aleatoire (ex: 45 + 27 = ?)"
+        operations: "ADD (+), SUBTRACT (-), MULTIPLY (×), DIVIDE (÷)"
+    configuration_chat_yml:
+      - "chat-games.enabled: true/false"
+      - "chat-games.time-between-games: secondes entre chaque jeu"
+      - "chat-games.answer-time: temps pour repondre"
+      - "chat-games.reward: nom de la recompense a utiliser"
+    messages:
+      - "Les messages sont personnalisables dans chat.yml"
+      - "{player} = pseudo du joueur"
+      - "{answer} = bonne reponse"
+      - "{reward} = recompense"
+
+  gui_modifiables:
+    description: "GUIs personnalisables et compatibilite ItemAdder"
+    dossier: "admincore/GUI/"
+    formats_supportes:
+      - "DeluxeMenus: format natif DeluxeMenus"
+      - "ItemAdder: items personnalises"
+      - "Custom: GUIs integres"
+    itemadder:
+      description: "Si ItemAdder est installe, les GUIs peuvent utiliser des items custom"
+      syntaxe: "namespace:item_name"
+      exemple: "mythic_items:epic_sword"
+    fonctionnement:
+      - "Le plugin detecte automatiquement les plugins installes"
+      - "Les GUIs peuvent etre modifies via les fichiers YAML"
+      - "Les items ItemAdder sont utilisables directement"
+
+  lookup_et_notes:
+    description: "Outils de suivi joueur."
+    commandes:
+      - "/lookup <joueur|ip>"
+      - "/alts <joueur>"
+      - "/history <joueur>"
+      - "/note <joueur> <texte>"
+      - "/notes <joueur>"
+    fonctionnement:
+      - "Lookup ouvre un GUI avec resume joueur, historique et sessions."
+      - "Le panneau principal peut afficher le temps de jeu cumule et le nombre total de sessions."
+      - "Les sessions stockent IP, pseudo, serveur source, heure de connexion et deconnexion."
+      - "Lookup peut aussi afficher l'IP, le client et le nombre de sanctions."
+      - "Les notes staff sont stockees en base."
+      - "L'historique liste les sanctions d'un joueur."
+
+  alerts:
+    description: "Alertes automatiques staff."
+    fonctionnement:
+      - "Surveille les warns recents, le nombre de comptes sur une meme IP et le nombre de connexions dans une fenetre de temps."
+      - "Les seuils sont definis dans config.yml."
+      - "Les alerts sont envoyees aux staffs avec son et message."
+
+  stafflogs:
+    description: "Journal des actions staff."
+    commande: "/stafflogs [staff]"
+    fonctionnement:
+      - "Affiche les actions staff en GUI pagine."
+      - "Peut filtrer sur un membre staff."
+      - "Les actions comme sanctions, tickets, vanish et teleportations sont logguees."
+
+  vpn:
+    description: "Verification VPN simple."
+    commande: "/checkvpn <joueur|ip>"
+    fonctionnement:
+      - "Utilise une URL definie dans config.yml."
+      - "Le module peut etre active ou desactive."
+
+base_de_donnees:
+  types:
+    - "SQLITE"
+    - "MYSQL"
+  fonctionnement:
+    - "Les requetes passent par HikariCP."
+    - "Le schema est cree automatiquement au demarrage."
+    - "Les requetes lourdes sont executees en async."
+    - "Les donnees joueurs, sanctions, tickets, messages ticket, sessions, notes, alerts et logs staff sont persistantes."
+    - "Les donnees de teleportation utilisent une base separee dans admincore/teleportation/."
+
+softdepends:
+  AxInventoryRestore: "Utilise pour les backups d'inventaire et leur GUI natif."
+  LuckPerms: "Utilise pour certaines integrations facultatives de roles et d'affichage."
+  HuskHomes: "API de teleportation optionnelle - si present, le plugin utilise cette API au lieu du systeme interne."
+
+  chat_mini_jeux:
+    description: "Mini-jeux interactifs dans le chat (mots caches et mathematiques)."
+    fichiers:
+      - "chat.yml - Configuration des messages et des jeux"
+      - "admincore/chat/animation.yml - Configuration des recompenses et des mots"
+    fonctionnement:
+      - "Jeu de mots: Un mot est cache (ex: C-h-a-r-b-o-n), le joueur doit deviner"
+      - "Jeu mathematique: Une operation aleatoire (ex: 45 + 27 = ?)"
+      - "Les recompenses sont donnees au premier joueur qui trouve"
+      - "Temps entre les jeux et temps pour repondre configurables"
+    configuration:
+      - "chat.yml -> chat-games: enabled: true/false"
+      - "admincore/chat/animation.yml -> rewards: type, amount"
+      - "admincore/chat/animation.yml -> word-game: liste des mots"
+      - "admincore/chat/animation.yml -> math-game: operations, difficultes"
+
+permissions_importantes:
+  - "admincore.*"
+  - "admincore.staffmode"
+  - "admincore.vanish"
+  - "admincore.freeze"
+  - "admincore.lookup"
+  - "admincore.history"
+  - "admincore.reports"
+  - "admincore.staffticket"
+  - "admincore.stafflogs"
+  - "admincore.inventory.view"
+  - "admincore.inventory.edit"
+  - "admincore.inventory.backup"
+  - "admincore.teleport.*"
+
+notes:
+  - "Les dialogs Paper peuvent etre desactives ou contournes selon la marque du client."
+  - "Le plugin sauvegarde certains fichiers par defaut au premier demarrage."
+  - "Certaines integrations sont optionnelles et dependent d'autres plugins presents sur le serveur."
+  - "Si un pseudo n'a jamais ete vu par le serveur, certaines recherches offline peuvent ne pas le retrouver."
+  - "Le module teleportation doit etre active dans config.yml pour fonctionner."

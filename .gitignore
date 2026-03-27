@@ -1,4 +1,4 @@
-target/
+
 versions/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/

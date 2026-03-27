@@ -1,0 +1,162 @@
+prefix: "<gradient:#D72638:#F49D37><bold>AdminCore</bold></gradient><gray> » </gray>"
+discord:
+  link: "discord.gg/example"
+
+errors:
+  no-permission: "<prefix><red>Tu n'as pas la permission.</red>"
+  player-only: "<prefix><red>Commande reservee aux joueurs.</red>"
+  no-player-found: "<prefix><red>Joueur introuvable.</red>"
+  invalid-duration: "<prefix><red>Duree invalide. Exemple: 1h, 30m, 2d.</red>"
+  database: "<prefix><red>Une erreur base de donnees est survenue.</red>"
+
+dialogs:
+  chat-prompt-reason: "<prefix><yellow>Saisis la raison dans le chat.</yellow>"
+  chat-prompt-duration: "<prefix><yellow>Saisis maintenant la duree, par exemple <white>1h30m</white>.</yellow>"
+  chat-prompt-confirm: "<prefix><gray>Recap: <white><value></white>. Tape <green>confirm</green> pour valider.</gray>"
+  chat-prompt-clearchat: "<prefix><yellow>Saisis les types a effacer: <white>all public players logs system</white>.</yellow>"
+  chat-prompt-finished: "<prefix><green>Flux termine.</green>"
+  player-picker-unavailable: "<prefix><red>Le selecteur de joueurs n'est pas disponible sans Dialog.</red>"
+  action-cancelled: "<prefix><yellow>Action annulee.</yellow>"
+
+sanctions:
+  applied: "<prefix><green><type></green> applique a <white><target></white> pour <gray><reason></gray> <dark_gray>(<duration>)</dark_gray>"
+  revoked: "<prefix><yellow><type></yellow> retire pour <white><target></white>."
+  revoke-none: "<prefix><red>Aucun <type> actif trouve pour <white><target></white>.</red>"
+  clearwarns: "<prefix><green>Warnings effaces pour <white><target></white>.</green>"
+  warn-notify: "<red>Tu as recu un avertissement</red> <gray>par <white><actor></white> :</gray> <yellow><reason></yellow>"
+  mute-actionbar: "<red>Tu es mute.</red>"
+  mute-chat: "<prefix><red>Tu es mute pour <white><duration></white>.</red> <gray>Raison: <white><reason></white> | Discord: <white><discord></white></gray>"
+  kick-screen: "<red>Tu as ete kick.</red>\n<gray>Raison: <white><reason></white> | Par: <white><actor></white></gray>"
+  ipban-kick: "<red>Tu as ete kick suite a un IP ban.</red>"
+  ipban-applied: "<prefix><red>IP ban applique sur <white><ip></white>.</red>"
+  login-ban-screen:
+    - "<gray>╔════════════════════════════════╗</gray>"
+    - "<red>║        ACCES REFUSE           ║</red>"
+    - "<gray>╠════════════════════════════════╣</gray>"
+    - "<white>║ Tu as ete banni de ce serveur ║</white>"
+    - "<white>║                                ║</white>"
+    - "<white>║ Sanction : <yellow><sanction></yellow></white>"
+    - "<white>║ Raison : <yellow><reason></yellow></white>"
+    - "<white>║ Par    : <yellow><actor></yellow></white>"
+    - "<white>║ Duree  : <yellow><duration></yellow></white>"
+    - "<white>║ Expire : <yellow><expires></yellow></white>"
+    - "<gray>╠════════════════════════════════╣</gray>"
+    - "<white>║ Pour contester cette sanction  ║</white>"
+    - "<white>║ rejoins notre Discord :        ║</white>"
+    - "<aqua>║ <discord> ║</aqua>"
+    - "<gray>╚════════════════════════════════╝</gray>"
+
+chat:
+  muted: "<prefix><red>Tu ne peux pas parler car tu es mute.</red>"
+  locked: "<prefix><red>Le chat est verrouille.</red>"
+  mute-all: "<prefix><red>Le chat global est coupe.</red>"
+  slowmode-active: "<prefix><red>Slowmode actif. Patiente un instant.</red>"
+  wait-before-talk: "<prefix><red>Tu dois encore attendre <white><time>s</white> avant de reparler.</red>"
+  repeat-message: "<prefix><red>Ne spam pas le meme message.</red>"
+  blocked-word: "<prefix><red>Mot interdit detecte: <white><word></white>.</red>"
+  clear-announcement: "<prefix><gray>Le chat a ete nettoye.</gray> <yellow><reason></yellow>"
+  clear-done: "<prefix><green>Chat nettoye.</green>"
+  clear-target-done: "<prefix><green>Le chat de <white><target></white> a ete nettoye.</green>"
+  history-empty: "<prefix><yellow>Aucun message recent n'est disponible.</yellow>"
+  message-removed: "<prefix><green>Le message de <white><author></white> a ete retire de la liste recente.</green>"
+  slowmode-status: "<prefix><gray>Slowmode: <white><seconds>s</white>.</gray>"
+  slowmode-updated: "<prefix><green>Slowmode defini a <white><seconds>s</white>.</green>"
+  slowmode-invalid: "<prefix><red>Valeur de slowmode invalide.</red>"
+  lock-enabled: "<prefix><red>Chat verrouille.</red>"
+  lock-disabled: "<prefix><green>Chat deverrouille.</green>"
+  muteall-enabled: "<prefix><red>MuteAll active.</red>"
+  muteall-disabled: "<prefix><green>MuteAll desactive.</green>"
+  staff-chat-format: "<dark_aqua>[Staff]</dark_aqua> <gray><author>:</gray> <white><message></white>"
+
+staffmode:
+  enabled: "<prefix><green>StaffMode active.</green>"
+  disabled: "<prefix><yellow>StaffMode desactive.</yellow>"
+  observe-enabled: "<prefix><green>Mode spectateur staff active.</green>"
+  observe-disabled: "<prefix><yellow>Mode spectateur staff desactive.</yellow>"
+  freeze-enabled: "<prefix><red><target> est freeze.</red>"
+  freeze-disabled: "<prefix><green><target> n'est plus freeze.</green>"
+  freeze-blocked: "<prefix><red>Tu es freeze. Cette action est bloquee.</red>"
+  spy-enabled: "<prefix><green>Spy active.</green>"
+  spy-disabled: "<prefix><yellow>Spy desactive.</yellow>"
+  spy-format: "<gray>[Spy] <white><player></white>: <yellow><message></yellow></gray>"
+  stafflist: "<prefix><gray>Staff en ligne: <white><players></white></gray>"
+  teleport-no-target: "<prefix><red>Aucun joueur ou bloc valide n'est vise.</red>"
+
+vanish:
+  enabled: "<prefix><green>Vanish active.</green>"
+  disabled: "<prefix><yellow>Vanish desactive.</yellow>"
+  enabled-target: "<prefix><green>Vanish active pour <white><target></white>.</green>"
+  disabled-target: "<prefix><yellow>Vanish desactive pour <white><target></white>.</yellow>"
+
+lookup:
+  player-result: "<prefix><gray>Lookup <white><target></white> | IP: <white><ip></white> | client: <white><client></white> | sanctions: <white><historyCount></white></gray>"
+  ip-result: "<prefix><gray>IP <white><ip></white> | comptes: <white><accounts></white></gray>"
+  alts-result: "<prefix><gray>Alts de <white><target></white>: <white><alts></white></gray>"
+
+reports:
+  created: "<prefix><green>Ton report sur <white><target></white> a ete cree. Ticket #<id>.</green>"
+  notify-actionbar: "<red>Nouveau ticket #<id></red> <gray><reporter> -> <white><target></white></gray>"
+  assigned: "<prefix><yellow>Ticket #<id> assigne.</yellow>"
+  closed: "<prefix><green>Ticket #<id> ferme.</green>"
+  archived: "<prefix><gray>Ticket #<id> archive.</gray>"
+  close-prompt: "<prefix><yellow>Saisis la note de cloture du ticket dans le chat.</yellow>"
+  message-empty: "<prefix><red>Le message du ticket ne peut pas etre vide.</red>"
+  reply-sent: "<prefix><green>Ta reponse sur le ticket #<id> a ete envoyee.</green>"
+  ticket-not-found: "<prefix><red>Ce ticket est introuvable.</red>"
+  ticket-not-owned: "<prefix><red>Ce ticket ne t'appartient pas.</red>"
+  ticket-not-active: "<prefix><red>Ce ticket est ferme ou archive.</red>"
+  ticket-busy: "<prefix><red>Ce ticket est deja pris en charge par un autre staff.</red>"
+  ticket-archive-invalid: "<prefix><red>Seuls les tickets fermes peuvent etre archives.</red>"
+  discord-priority: "<prefix><gray>Si possible, privilegie les tickets Discord pour une meilleure facilite.</gray>"
+
+alerts:
+  triggered: "<prefix><red>Alerte <white><type></white>:</red> <gray><details></gray>"
+
+notes:
+  created: "<prefix><green>Note ajoutee pour <white><target></white>.</green>"
+  header: "<prefix><gray>Notes pour <white><target></white>:</gray>"
+
+vpn:
+  disabled: "<prefix><red>Le module VPN est desactive.</red>"
+  result: "<prefix><gray>Resultat pour <white><ip></white>: <yellow><result></yellow></gray>"
+
+inventory:
+  open-error: "<prefix><red>Impossible d'ouvrir ce conteneur pour le moment.</red>"
+  cleared: "<prefix><yellow>Le conteneur de <white><target></white> a ete vide.</yellow>"
+  backup-unavailable: "<prefix><red>AxInventoryRestore est absent ou indisponible.</red>"
+  backup-disabled: "<prefix><red>Les backups d'inventaire sont desactives dans inventorybackup.yml.</red>"
+  backup-created: "<prefix><green>Backup manuel cree pour <white><target></white> <gray>(<type>)</gray>.</green>"
+  backup-create-error: "<prefix><red>Impossible de creer le backup manuel.</red>"
+  backup-create-offline: "<prefix><red>Le joueur doit etre en ligne pour creer un backup manuel.</red>"
+  backup-restored: "<prefix><green>Snapshot <white><type></white> restaure pour <white><target></white>.</green>"
+  backup-restore-error: "<prefix><red>La restauration du snapshot a echoue.</red>"
+
+stafflogs:
+  opened: "<prefix><gray>Ouverture des logs staff.</gray>"
+
+admin:
+  reload: "<prefix><green>Configuration rechargee.</green>"
+  debug: "<prefix><gray>Debug | frozen=<white><staffmode></white> vanished=<white><vanished></white> slowmode=<white><slowmode></white></gray>"
+  db-export: "<prefix><green>Export DB cree: <white><file></white></green>"
+  search-prompt: "<prefix><yellow>Ecris un pseudo ou debut de pseudo dans le chat.</yellow>"
+  online-target: "<prefix><green>Teleportation staff sur <white><target></white> avec vanish + spectateur.</green>"
+  approval-notify: "<prefix><yellow>Validation <white><approverRole></white> requise #<id></yellow> <gray><requester></gray> veut appliquer <white><type></white> a <white><target></white> <dark_gray>(<duration>)</dark_gray> pour <gray><reason></gray>. Utilise <white>/staff approve <id></white> ou <white>/staff deny <id></white>."
+  approval-submitted: "<prefix><yellow>La sanction <white><type></white> sur <white><target></white> a ete envoyee en validation <white><approverRole></white>. ID: <white><id></white>.</yellow>"
+  approval-approved: "<prefix><green>La demande #<id> pour <white><target></white> a ete approuvee.</green>"
+  approval-denied: "<prefix><red>La demande #<id> pour <white><target></white> a ete refusee.</red>"
+  approval-processed: "<prefix><green>La demande #<id> a ete <white><state></white>.</green>"
+  approval-invalid-id: "<prefix><red>ID de validation invalide ou introuvable.</red>"
+  approval-none-pending: "<prefix><yellow>Aucune validation en attente.</yellow>"
+  approval-pending-line: "<prefix><gray>#<id> <white><requester></white> -> <yellow><type></yellow> <white><target></white> <dark_gray>(<duration>)</dark_gray> <gray>[Validation: <white><approverRole></white>]</gray></gray>"
+
+staff:
+  assign-added: "<prefix><green><target></green> a ete ajoute comme <white><role></white>.</green>"
+  assign-removed: "<prefix><yellow><target></yellow> a ete retire du staff.</yellow>"
+  assign-remove-missing: "<prefix><red>Ce joueur n'est pas dans le staff configure.</red>"
+  assign-pending-sync: "<prefix><gray>Synchronisation du role staff en cours...</gray>"
+  assign-provider-unavailable: "<prefix><red>LuckPerms n'est pas disponible pour synchroniser ce role.</red>"
+  assign-config-error: "<prefix><red>La configuration LuckPerms staff est invalide.</red>"
+  assign-sync-error: "<prefix><red>La synchronisation du role staff a echoue.</red>"
+  assign-list-header: "<prefix><gray>Membres du staff configures:</gray>"
+  assign-list-line: "<gray>- <white><target></white> <dark_gray>:</dark_gray> <yellow><role></yellow></gray>"
+  assign-list-empty: "<prefix><yellow>Aucun membre du staff n'est configure.</yellow>"

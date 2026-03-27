@@ -293,6 +293,32 @@ public final class AdminCorePlugin extends JavaPlugin {
         networkCommand.setNetworkDialog(new NetworkDialog(this.geoIPService));
         bind("network", networkCommand);
         bind("net", networkCommand);
+        
+        if (teleportationEnabled && teleportService != null) {
+            final TeleportCommands teleportCommands = new TeleportCommands(this, teleportService);
+            final TeleportDialogs teleportDialogs = new TeleportDialogs(this, teleportService);
+            this.teleportDialog = new TeleportDialog(this, teleportService);
+            teleportCommands.setTeleportDialogs(teleportDialogs);
+            bind("sethome", teleportCommands);
+            bind("home", teleportCommands);
+            bind("delhome", teleportCommands);
+            bind("listhomes", teleportCommands);
+            bind("setwarp", teleportCommands);
+            bind("warp", teleportCommands);
+            bind("delwarp", teleportCommands);
+            bind("listwarps", teleportCommands);
+            bind("spawn", teleportCommands);
+            bind("setspawn", teleportCommands);
+            bind("rtp", teleportCommands);
+            bind("tpa", teleportCommands);
+            bind("tpahere", teleportCommands);
+            bind("tpaccept", teleportCommands);
+            bind("tpdeny", teleportCommands);
+            bind("tpignore", teleportCommands);
+            bind("back", teleportCommands);
+            bind("teleportation", teleportCommands);
+            bind("teleport", teleportCommands);
+        }
     }
 
     private void initTeleportation() {
@@ -306,7 +332,6 @@ public final class AdminCorePlugin extends JavaPlugin {
             this.teleportConfigLoader = new TeleportConfigLoader(this);
             this.teleportConfigLoader.load();
             this.teleportDatabase = new TeleportDatabase(this);
-            this.teleportDatabase.load();
             this.teleportService = new TeleportService(this, teleportDatabase, teleportConfigLoader.getConfig());
             getLogger().info("Module de teleportation active.");
         } catch (Exception e) {

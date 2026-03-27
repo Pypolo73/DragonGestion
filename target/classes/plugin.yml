@@ -1,0 +1,389 @@
+name: AdminCore
+version: 1.1.54
+main: fr.dragon.admincore.core.AdminCorePlugin
+api-version: "1.21"
+author: OpenAI
+description: Plugin staff modulaire Paper 1.21.8 avec compatibilite StaffPlusPlus API
+softdepend:
+  - AxInventoryRestore
+  - LuckPerms
+
+commands:
+  report:
+    description: Creer un ticket de report
+    usage: /report <joueur>
+  ticket:
+    description: Voir et repondre a ses tickets
+    usage: /ticket <list|reply>
+  staffticket:
+    description: Gestion staff des tickets
+    usage: /staffticket <list|view|assign|close|archive|history>
+    aliases: [tickets]
+    permission: admincore.staffticket
+  stafflogs:
+    description: Voir les actions staff
+    usage: /stafflogs [staff]
+    permission: admincore.stafflogs
+  tempban:
+    description: Ban temporaire
+    usage: /tempban <joueur> [duree] [raison]
+    permission: admincore.tempban
+  tempmute:
+    description: Mute temporaire
+    usage: /tempmute <joueur> [duree] [raison]
+    permission: admincore.tempmute
+  ban:
+    description: Ban permanent
+    usage: /ban <joueur> [raison]
+    permission: admincore.ban
+  mute:
+    description: Mute permanent
+    usage: /mute <joueur> [raison]
+    permission: admincore.mute
+  unban:
+    description: Deban un joueur
+    usage: /unban <joueur>
+    permission: admincore.unban
+  unmute:
+    description: Demute un joueur
+    usage: /unmute <joueur>
+    permission: admincore.unmute
+  kick:
+    description: Kick un joueur
+    usage: /kick <joueur> [raison]
+    permission: admincore.kick
+  warn:
+    description: Avertir un joueur
+    usage: /warn <joueur> [raison]
+    permission: admincore.warn
+  warnings:
+    description: Voir les warnings
+    usage: /warnings <joueur>
+    permission: admincore.warnings
+  clearwarns:
+    description: Effacer les warnings
+    usage: /clearwarns <joueur>
+    permission: admincore.clearwarns
+  clearchat:
+    description: Nettoyer le chat
+    usage: /clearchat [type]
+    permission: admincore.clearchat
+  chat:
+    description: Gestion rapide du chat
+    usage: /chat <clear|slowmode|lock|muteall|broadcast>
+  slowmode:
+    description: Activer le slowmode
+    usage: /slowmode <secondes|off>
+    permission: admincore.slowmode
+  chatlock:
+    description: Verrouiller le chat
+    usage: /chatlock
+    permission: admincore.chatlock
+  muteall:
+    description: Couper tout le chat
+    usage: /muteall
+    permission: admincore.muteall
+  broadcast:
+    description: Broadcast staff
+    usage: /broadcast <message>
+    permission: admincore.broadcast
+  staffmode:
+    description: Basculer en staffmode
+    usage: /staffmode
+    permission: admincore.staffmode
+  staff:
+    description: Gestion du staff et des validations
+    usage: /staff <add|remove|list|pending|approve|deny>
+    permission: admincore.staff
+  vanish:
+    description: Vanish
+    usage: /vanish [joueur]
+    permission: admincore.vanish
+  freeze:
+    description: Freeze un joueur
+    usage: /freeze <joueur>
+    permission: admincore.freeze
+  spy:
+    description: Social spy
+    usage: /spy
+    permission: admincore.spy
+  invsee:
+    description: Voir un inventaire
+    usage: /invsee <joueur>
+    permission: admincore.invsee
+  stafflist:
+    description: Liste le staff
+    usage: /stafflist
+    permission: admincore.stafflist
+  history:
+    description: Historique d'un joueur
+    usage: /history <joueur>
+    permission: admincore.history
+  lookup:
+    description: Lookup joueur ou ip
+    usage: /lookup <joueur|ip>
+    permission: admincore.lookup
+  alts:
+    description: Chercher les alts
+    usage: /alts <joueur>
+    permission: admincore.alts
+  note:
+    description: Ajouter une note
+    usage: /note <joueur> <texte>
+    permission: admincore.note
+  notes:
+    description: Voir les notes
+    usage: /notes <joueur>
+    permission: admincore.notes
+  ipban:
+    description: IP ban
+    usage: /ipban <joueur|ip>
+    permission: admincore.ipban
+  checkvpn:
+    description: Verifier un VPN
+    usage: /checkvpn <joueur|ip>
+    permission: admincore.checkvpn
+  network:
+    description: Commandes reseau et securite
+    usage: /network <info|geo|reload>
+    aliases: [net]
+    permission: admincore.network
+  admincore:
+    description: Administration plugin
+    usage: /admincore <reload|debug|db export|pending|approve|deny>
+    permission: admincore.admin
+  inventory:
+    description: Voir ou modifier l'inventaire d'un joueur
+    usage: /inventory <joueur>
+    aliases: [inv, inventaire]
+    permission: admincore.inventory.view
+  sethome:
+    description: Creer un home
+    usage: /sethome [nom]
+  home:
+    description: Se teleporter a un home
+    usage: /home [nom]
+  delhome:
+    description: Supprimer un home
+    usage: /delhome <nom>
+  listhomes:
+    description: Liste vos homes
+    usage: /listhomes
+    aliases: [homes]
+  setwarp:
+    description: Creer un warp
+    usage: /setwarp <nom> [description]
+    permission: admincore.teleport.warp.create
+  warp:
+    description: Se teleporter a un warp
+    usage: /warp [nom]
+  delwarp:
+    description: Supprimer un warp
+    usage: /delwarp <nom>
+    permission: admincore.teleport.warp.delete
+  listwarps:
+    description: Liste les warps
+    usage: /listwarps
+    aliases: [warps]
+  spawn:
+    description: Se teleporter au spawn
+    usage: /spawn
+  setspawn:
+    description: Definir le spawn
+    usage: /setspawn
+    permission: admincore.teleport.spawn.set
+  rtp:
+    description: Teleportation aleatoire
+    usage: /rtp
+    permission: admincore.teleport.rtp
+  tpa:
+    description: Demander a se teleporter vers un joueur
+    usage: /tpa <joueur>
+  tpahere:
+    description: Demander a un joueur de se teleporter sur vous
+    usage: /tpahere <joueur>
+  tpaccept:
+    description: Accepter une requete de teleportation
+    usage: /tpaccept [joueur]
+  tpdeny:
+    description: Refuser une requete de teleportation
+    usage: /tpdeny [joueur]
+  tpignore:
+    description: Ignorer/Accepter les requetes
+    usage: /tpignore
+  back:
+    description: Retour a la position precedente
+    usage: /back
+  teleportation:
+    description: Menu de teleportation
+    usage: /teleportation
+    aliases: [teleport]
+    permission: admincore.teleportation
+  teleport:
+    description: Menu de teleportation (alias)
+    usage: /teleportation
+    aliases: [tp]
+
+permissions:
+  admincore.*:
+    default: op
+    children:
+      admincore.staff: true
+      admincore.tempban: true
+      admincore.tempmute: true
+      admincore.ban: true
+      admincore.mute: true
+      admincore.unban: true
+      admincore.unmute: true
+      admincore.kick: true
+      admincore.warn: true
+      admincore.warnings: true
+      admincore.clearwarns: true
+      admincore.clearchat: true
+      admincore.slowmode: true
+      admincore.chatlock: true
+      admincore.muteall: true
+      admincore.broadcast: true
+      admincore.staffmode: true
+      admincore.vanish: true
+      admincore.freeze: true
+      admincore.spy: true
+      admincore.invsee: true
+      admincore.stafflist: true
+      admincore.history: true
+      admincore.lookup: true
+      admincore.alts: true
+      admincore.note: true
+      admincore.notes: true
+      admincore.ipban: true
+      admincore.checkvpn: true
+      admincore.network: true
+      admincore.alerts: true
+      admincore.reports: true
+      admincore.staffticket: true
+      admincore.inventory.view: true
+      admincore.inventory.edit: true
+      admincore.inventory.backup: true
+      admincore.stafflogs: true
+      admincore.admin: true
+      admincore.chat.bypass: true
+      admincore.freeze.bypass: true
+      admincore.vanish.see: true
+  admincore.staff:
+    default: op
+  admincore.tempban:
+    default: op
+  admincore.tempmute:
+    default: op
+  admincore.ban:
+    default: op
+  admincore.mute:
+    default: op
+  admincore.unban:
+    default: op
+  admincore.unmute:
+    default: op
+  admincore.kick:
+    default: op
+  admincore.warn:
+    default: op
+  admincore.warnings:
+    default: op
+  admincore.clearwarns:
+    default: op
+  admincore.clearchat:
+    default: op
+  admincore.slowmode:
+    default: op
+  admincore.chatlock:
+    default: op
+  admincore.muteall:
+    default: op
+  admincore.broadcast:
+    default: op
+  admincore.staffmode:
+    default: op
+  admincore.vanish:
+    default: op
+  admincore.freeze:
+    default: op
+  admincore.spy:
+    default: op
+  admincore.invsee:
+    default: op
+  admincore.stafflist:
+    default: op
+  admincore.history:
+    default: op
+  admincore.lookup:
+    default: op
+  admincore.alts:
+    default: op
+  admincore.note:
+    default: op
+  admincore.notes:
+    default: op
+  admincore.ipban:
+    default: op
+  admincore.checkvpn:
+    default: op
+  admincore.network:
+    default: op
+  admincore.alerts:
+    default: op
+  admincore.reports:
+    default: op
+  admincore.staffticket:
+    default: op
+  admincore.inventory.view:
+    default: op
+  admincore.inventory.edit:
+    default: op
+    children:
+      admincore.inventory.view: true
+  admincore.inventory.backup:
+    default: op
+    children:
+      admincore.inventory.view: true
+  admincore.stafflogs:
+    default: op
+  admincore.admin:
+    default: op
+  admincore.chat.bypass:
+    default: false
+  admincore.freeze.bypass:
+    default: false
+  admincore.vanish.see:
+    default: op
+  admincore.teleport.home.create:
+    default: true
+  admincore.teleport.home.use:
+    default: true
+  admincore.teleport.home.delete:
+    default: true
+  admincore.teleport.warp.create:
+    default: op
+  admincore.teleport.warp.use:
+    default: true
+  admincore.teleport.warp.delete:
+    default: op
+  admincore.teleport.spawn.use:
+    default: true
+  admincore.teleport.spawn.set:
+    default: op
+  admincore.teleport.rtp:
+    default: true
+  admincore.teleport.rtp.other:
+    default: op
+  admincore.teleport.tpa.send:
+    default: true
+  admincore.teleport.tpa.receive:
+    default: true
+  admincore.teleport.tpa.bypass:
+    default: op
+  admincore.teleport.back:
+    default: true
+  admincore.teleport.homes.bonus:
+    default: false
+  admincore.teleport.homes.unlimited:
+    default: false
