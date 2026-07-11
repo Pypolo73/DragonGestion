@@ -1,5 +1,7 @@
 # AdminCore
 
+# ⚠️Le plugin a été intégralement fait par IA sans relecture par développeur ⚠️
+
 AdminCore est un plugin staff pour Paper 1.21.8, structure par modules (`core`, `dialog`, `sanctions`, `chat`, `staffmode`, `vanish`, `database`, `gui`, `util`) et expose une compatibilite `StaffPlusPlus API` via `IStaffPlus`.
 
 ## Installation
